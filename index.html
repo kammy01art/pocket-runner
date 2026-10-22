@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- 検索結果に出さない（URL を知っている人だけが使う想定） -->
+  <meta name="robots" content="noindex, nofollow">
+  <title>Pocket Runner（試作）</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main id="menu" class="menu">
+    <header>
+      <h1>Pocket Runner <span class="tag">試作</span></h1>
+      <p class="lead">自分の持っているGameMakerのゲームを、ブラウザの中で動かします。ゲームのデータはこのブラウザの中にだけ保存され、どこにも送信されません。</p>
+    </header>
+
+    <section>
+      <h2>動作環境</h2>
+      <ul id="env" class="env"></ul>
+    </section>
+
+    <section>
+      <h2>ゲームを取り込む</h2>
+      <p class="hint">Steamでゲームを右クリック →「管理」→「ローカルファイルを閲覧」で開いたフォルダを取り込みます。スマホでは、そのフォルダをZIPにまとめてから選んでください。</p>
+      <div class="row">
+        <label class="button">
+          ZIPを選ぶ
+          <input id="zip-input" type="file" accept=".zip,application/zip" hidden>
+        </label>
+        <label id="folder-button" class="button secondary">
+          フォルダを選ぶ
+          <input id="folder-input" type="file" webkitdirectory multiple hidden>
+        </label>
+        <button id="dev-import" class="button secondary" type="button" hidden></button>
+      </div>
+      <div id="import-progress" class="progress" hidden>
+        <div class="bar"><div id="import-bar"></div></div>
+        <p id="import-text" class="hint"></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>取り込み済みのゲーム</h2>
+      <ul id="games" class="games"></ul>
+      <p id="no-games" class="hint">まだありません。</p>
+    </section>
+
+    <details id="log-panel" class="log">
+      <summary>ログ</summary>
+      <pre id="log"></pre>
+    </details>
+  </main>
+
+  <div id="player" class="player" hidden>
+    <div class="stage">
+      <canvas id="canvas" tabindex="0"></canvas>
+    </div>
+
+    <!-- キーボードで遊ぶとき（PC）の下部バー -->
+    <div class="player-bar">
+      <span id="player-status"></span>
+      <button id="quit" class="button small" type="button">終了</button>
+    </div>
+
+    <!-- タッチ操作。縦持ちは画面の下、横持ちは画面の左右に並ぶ -->
+    <div class="controls">
+      <button id="open-menu" class="app-menu" type="button" aria-label="メニュー">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="pad-btn pill" type="button" data-key="67"><span>C</span></button>
+      <div id="dpad" class="dpad">
+        <div class="dpad-cross">
+          <span class="arm up" data-dir="up"></span>
+          <span class="arm right" data-dir="right"></span>
+          <span class="arm down" data-dir="down"></span>
+          <span class="arm left" data-dir="left"></span>
+        </div>
+      </div>
+      <div class="face">
+        <button class="pad-btn round" type="button" data-key="88"><span>X</span></button>
+        <button class="pad-btn round primary" type="button" data-key="90"><span>Z</span></button>
+      </div>
+    </div>
+
+    <div id="game-menu" class="sheet" hidden>
+      <div class="sheet-panel">
+        <p id="game-menu-title" class="sheet-title"></p>
+        <button id="resume" class="button" type="button">ゲームに戻る</button>
+        <button id="quit-from-menu" class="button danger" type="button">終了する</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

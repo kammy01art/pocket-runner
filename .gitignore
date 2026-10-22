@@ -1,0 +1,13 @@
+# このPCだけの設定
+.claude/
+__pycache__/
+
+# ゲームのデータは絶対に公開しない（うっかり置いても記録されないように）
+*.zip
+*.win
+*.unx
+*.droid
+*.ios
+*.ogg
+*.exe
+*.dll

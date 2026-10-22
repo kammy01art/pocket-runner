@@ -1,0 +1,331 @@
+:root {
+  color-scheme: dark;
+  --bg: #121214;
+  --surface: #1c1c20;
+  --line: #2e2e34;
+  --text: #ececf0;
+  --muted: #9a9aa4;
+  --accent: #f2c14e;
+  --accent-text: #1a1406;
+  --ok: #6fcf97;
+  --ng: #f2786d;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.6 system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+}
+
+/* ===== メニュー ===== */
+
+.menu {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+h1 { font-size: 24px; margin: 0 0 8px; }
+h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+
+.tag {
+  font-size: 12px;
+  vertical-align: middle;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--muted);
+}
+
+.lead { margin: 0; color: var(--muted); }
+.hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+
+section {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.button:disabled { opacity: .5; cursor: default; }
+.button.secondary { background: var(--line); color: var(--text); }
+.button.danger { background: transparent; color: var(--ng); box-shadow: inset 0 0 0 1px var(--line); }
+.button.small { min-height: 32px; padding: 0 12px; font-size: 13px; }
+
+.env { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.env li { display: flex; gap: 8px; align-items: baseline; }
+.env .mark { width: 1.2em; font-weight: 700; }
+.env .ok .mark { color: var(--ok); }
+.env .ng .mark { color: var(--ng); }
+.env .note { color: var(--muted); font-size: 13px; }
+
+.progress { margin-top: 16px; }
+.bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+.progress .hint { margin-top: 8px; }
+
+.games { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.games li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.games .name { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
+
+.log { margin-top: 24px; }
+.log summary { cursor: pointer; color: var(--muted); }
+.log pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 12px;
+  background: #000;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.log .error { color: var(--ng); }
+
+/* ===== プレイ画面 ===== */
+
+.player {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+.stage { flex: 1; min-height: 0; display: flex; }
+
+#canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  outline: none;
+}
+
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.player-bar span { flex: 1; }
+
+.controls { display: none; }
+
+/* ===== タッチ操作 ===== */
+
+.player.touch {
+  --pad: #26262c;
+  --pad-line: #3a3a42;
+  --pad-ink: #b8b8c2;
+  --dpad-size: clamp(116px, 34vmin, 172px);
+  --btn: clamp(52px, 16vmin, 76px);
+  /* 当たり判定は見た目より広くする（片側ぶん） */
+  --hit: 10px;
+
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "stage" "controls";
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.player.touch .player-bar { display: none; }
+
+.player.touch .stage {
+  grid-area: stage;
+  width: 100%;
+  aspect-ratio: var(--game-aspect, 4 / 3);
+  max-height: 60dvh;
+}
+
+/* 縦持ち（A）: ゲーム画面の下に操作をまとめる */
+.player.touch .controls {
+  grid-area: controls;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "menu sys" "dpad face";
+  align-items: center;
+  padding: 8px 12px 16px;
+}
+
+.app-menu {
+  grid-area: menu;
+  justify-self: start;
+  align-self: start;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--pad-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pad-btn {
+  padding: var(--hit);
+  border: 0;
+  background: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pad-btn span {
+  display: grid;
+  place-items: center;
+  width: var(--btn);
+  height: var(--btn);
+  border-radius: 50%;
+  background: var(--pad);
+  box-shadow: inset 0 0 0 1px var(--pad-line);
+  color: var(--pad-ink);
+  font: 600 22px/1 system-ui, sans-serif;
+}
+.pad-btn.primary span { color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pad-btn.on span { background: var(--accent); color: var(--accent-text); box-shadow: none; }
+
+.pad-btn.pill {
+  grid-area: sys;
+  justify-self: end;
+  align-self: start;
+}
+.pad-btn.pill span {
+  width: auto;
+  height: 32px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 15px;
+}
+
+.dpad {
+  grid-area: dpad;
+  justify-self: start;
+  padding: var(--hit);
+  touch-action: none;
+}
+.dpad-cross {
+  position: relative;
+  width: var(--dpad-size);
+  height: var(--dpad-size);
+}
+.dpad-cross::after,
+.arm {
+  position: absolute;
+  width: 34%;
+  height: 34%;
+  background: var(--pad);
+}
+.dpad-cross::after { content: ""; left: 33%; top: 33%; }
+.arm { --ink: var(--pad-ink); }
+.arm.up { left: 33%; top: 0; border-radius: 8px 8px 0 0; }
+.arm.down { left: 33%; bottom: 0; border-radius: 0 0 8px 8px; }
+.arm.left { left: 0; top: 33%; border-radius: 8px 0 0 8px; }
+.arm.right { right: 0; top: 33%; border-radius: 0 8px 8px 0; }
+.arm.on { background: var(--accent); --ink: var(--accent-text); }
+.arm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+}
+.arm.up::before { border-top-width: 0; border-bottom-color: var(--ink); }
+.arm.down::before { border-bottom-width: 0; border-top-color: var(--ink); }
+.arm.left::before { border-left-width: 0; border-right-color: var(--ink); }
+.arm.right::before { border-right-width: 0; border-left-color: var(--ink); }
+
+/* Z を右上、X を左下に斜めに並べる */
+.face {
+  grid-area: face;
+  justify-self: end;
+  position: relative;
+  width: calc((var(--btn) + var(--hit) * 2) * 2);
+  height: calc((var(--btn) + var(--hit) * 2) * 1.45);
+}
+.face .pad-btn { position: absolute; }
+.face [data-key="90"] { right: 0; top: 0; }
+.face [data-key="88"] { left: 0; bottom: 0; }
+
+/* 横持ち（B）: ゲーム画面を真ん中に、操作を左右に分ける */
+@media (orientation: landscape) {
+  .player.touch {
+    --dpad-size: clamp(100px, 30vmin, 160px);
+    --btn: clamp(46px, 14vmin, 72px);
+
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "menu stage sys" "dpad stage face";
+  }
+  .player.touch .controls { display: contents; }
+  .player.touch .stage {
+    width: auto;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: none;
+    /* 左右に操作を置く幅を最低限残す */
+    max-width: calc(100vw - 2 * 136px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  }
+  .app-menu { margin: 8px; }
+  .pad-btn.pill { margin: 4px; }
+  .dpad,
+  .face { justify-self: center; align-self: center; }
+}
+
+/* ===== ゲーム中のメニュー ===== */
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / .6);
+}
+.sheet-panel {
+  display: grid;
+  gap: 8px;
+  width: min(320px, 100%);
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.sheet-title { margin: 0 0 8px; font-weight: 600; text-align: center; }

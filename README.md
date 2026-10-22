@@ -1,0 +1,65 @@
+# Pocket Runner（試作）
+
+自分の持っている GameMaker のゲームを、ブラウザの中で動かすための試作です。
+ゲームを動かす部分には [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch) の WebAssembly 版を使っています（`engine/` を参照）。
+
+公開ページ: https://kammy01art.github.io/pocket-runner/
+
+このアプリにゲームは入っていません。自分で購入したゲームのデータを使ってください。
+ゲームのフォルダや ZIP を選ぶと、そのブラウザの保存領域（OPFS）にだけ取り込まれ、どこにも送信されません。
+
+## PC で動かす
+
+Python 3 が必要です。
+
+```
+python devserver.py --port 8765 --game-dir "C:\Program Files (x86)\Steam\steamapps\common\Undertale"
+```
+
+ブラウザ（Chrome 137 以降）で http://localhost:8765/ を開きます。
+
+- 「ZIPを選ぶ」: ゲームフォルダを ZIP にまとめたものを取り込む（スマホはこちらだけ）
+- 「フォルダを選ぶ」: Steam のゲームフォルダをそのまま取り込む（PC のみ）
+- 「開発用：PC の〜から取り込む」: `--game-dir` で渡したフォルダを取り込む（localhost のときだけ表示）
+
+## スマホに取り込む
+
+1. PC で Steam のゲームフォルダを右クリック →「圧縮先」→「ZIP ファイル」
+2. できた ZIP を iCloud Drive や Google ドライブなどに置く
+3. スマホでこのアプリを開き、「ZIPを選ぶ」から ZIP を選ぶ
+
+ZIP の中でフォルダに入っていても、`data.win` があるフォルダを見つけて取り込みます。
+
+## 操作
+
+### キーボード
+
+アンダーテイルの場合: 矢印キーで移動、Z / Enter で決定、X / Shift でキャンセル、C / Ctrl でメニュー。
+
+### タッチ
+
+指で触れる端末では、画面にボタンが出ます。PC で確かめるときは http://localhost:8765/?touch を開きます。
+
+- 縦持ち: ゲーム画面の下に、十字キー（左）と Z・X（右）を並べる
+- 横持ち: ゲーム画面を真ん中に、十字キーを左、Z・X を右に分ける
+- 十字キーは指を滑らせて方向を変えられる。上下左右の真上から ±30° は1方向、そのあいだは斜め
+- 左上のボタンでゲーム中のメニュー（終了）を開く。開いているあいだもゲームは止まらない
+
+## ファイル
+
+| ファイル | 内容 |
+| --- | --- |
+| `index.html` / `style.css` | 画面 |
+| `app.js` | 取り込み、起動、キー入力、タッチ操作 |
+| `zip.js` | ZIP の中身を読む（ブラウザ標準の機能だけで展開） |
+| `engine/` | Butterscotch のビルド（AGPL-3.0） |
+| `devserver.py` | 開発用のローカルサーバー（127.0.0.1 のみ） |
+
+## 既知の問題
+
+- エンジンの 2026-10-18 の更新で、WebGL のシェーダーが組み立てられず画面が真っ黒になる不具合が入っている。`app.js` で応急処置済み（`uFogColor` を検索）。
+- 動作環境: Chrome 137 以降 / Safari 27 以降（iOS 27 以降）/ Firefox 153 以降。保存領域を使うため、localhost 以外では HTTPS が必要。
+
+## ライセンス
+
+AGPL-3.0（`LICENSE` を参照）。ゲームを動かす部分に AGPL-3.0 の Butterscotch を使っているため、このリポジトリ全体も同じライセンスにしています。
