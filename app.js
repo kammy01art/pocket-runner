@@ -298,6 +298,25 @@ function loadEngine() {
   return enginePromise;
 }
 
+// アンダーテイルは本来、パソコンの言語が日本語なら日本語で始まる。
+// エンジンはいつも「英語」と答えるので、初めて遊ぶときだけ言語設定を先に書いておく。
+// （ゲームの「せってい」で言語を変えると、このファイルが書き換わってそちらが優先される）
+async function presetLanguage(id) {
+  if (!/undertale/i.test(id) || !navigator.language.toLowerCase().startsWith('ja')) return;
+  const saves = await (await navigator.storage.getDirectory()).getDirectoryHandle('saves', { create: true });
+  const dir = await saves.getDirectoryHandle(id, { create: true });
+  try {
+    await dir.getFileHandle('config.ini');
+    return; // 設定がすでにある
+  } catch {
+    // まだない（初めて遊ぶ）
+  }
+  const writable = await (await dir.getFileHandle('config.ini', { create: true })).createWritable();
+  await writable.write('[General]\nlang="ja"\n');
+  await writable.close();
+  log('言語を日本語にしました（ゲームの「せってい」で変えられます）');
+}
+
 async function play(id) {
   if (engineBroken) {
     // エンジンが異常終了したあとは作り直す必要があるので、ページごと読み込み直す
@@ -316,6 +335,7 @@ async function play(id) {
   let Module;
   try {
     Module = await loadEngine();
+    await presetLanguage(id);
     const args = [`butterscotch/games/${id}/data.win`, '--save-folder', `butterscotch/saves/${id}`];
     pointers = args.map((arg) => Module.stringToNewUTF8(arg));
     argv = Module._malloc(4 * (pointers.length + 1));
