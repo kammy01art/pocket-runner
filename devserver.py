@@ -29,6 +29,8 @@ class Handler(SimpleHTTPRequestHandler):
         ".js": "text/javascript; charset=utf-8",
         ".mjs": "text/javascript; charset=utf-8",
         ".wasm": "application/wasm",
+        ".webmanifest": "application/manifest+json",
+        ".svg": "image/svg+xml",
         ".md": "text/plain; charset=utf-8",
     }
 

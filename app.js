@@ -284,12 +284,61 @@ let enginePromise = null;
 let engineBroken = false;
 let running = null; // 動いている間のエンジン
 
+// 次のコマまでの待ち時間を、画面の書き換えの合図（requestAnimationFrame）にそろえる。
+// エンジンはタイマーで待つので、そのままだと 120Hz などの画面の書き換えとずれて
+// コマの間隔がまばらになり、かくかくして見える。
+const VSYNC_TOLERANCE_MS = 4; // 予定よりこの分だけ早くても、その書き換えで次のコマに進む
+let frameCount = 0; // なめらかさ（1秒あたりのコマ数）を出すために数える
+let lastVsync = 0; // 最後に書き換えの合図が来た時刻
+
+function sleepUntilVsync(ms) {
+  frameCount++;
+  return new Promise((resolve) => {
+    // 合図がしばらく来ていない（画面が隠れているなど）ときは、タイマーだけで待つ
+    if (performance.now() - lastVsync > 250) {
+      requestAnimationFrame((now) => {
+        lastVsync = now;
+      });
+      setTimeout(resolve, ms);
+      return;
+    }
+    const wake = performance.now() + ms;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    const onFrame = (now) => {
+      lastVsync = now;
+      if (done) return;
+      if (now >= wake - VSYNC_TOLERANCE_MS) finish();
+      else requestAnimationFrame(onFrame);
+    };
+    // 近くまではタイマーで寝て、最後だけ書き換えの合図で起きる
+    setTimeout(() => requestAnimationFrame(onFrame), Math.max(0, ms - 12));
+    // 途中で合図が止まっても、ゲームが止まったままにならないようにする
+    setTimeout(finish, ms + 250);
+  });
+}
+
 function loadEngine() {
   enginePromise ??= (async () => {
     log('エンジンを読み込んでいます…');
     const Module = await createModule({
       print: (text) => log(text),
       printErr: (text) => log(text, 'error'),
+      // エンジンの「待つ」処理だけを差し替えて読み込む
+      instantiateWasm(imports, receiveInstance) {
+        if (typeof WebAssembly.Suspending === 'function') {
+          imports.env.emscripten_sleep = new WebAssembly.Suspending(sleepUntilVsync);
+        }
+        const url = new URL('./engine/butterscotch.wasm', import.meta.url);
+        WebAssembly.instantiateStreaming(fetch(url), imports)
+          .then(({ instance }) => receiveInstance(instance))
+          .catch((e) => log(`エンジンを読み込めませんでした: ${e?.message ?? e}`, 'error'));
+        return {};
+      },
     });
     const rc = await Module._mountOpfs();
     if (rc !== 0) throw new Error('保存領域（OPFS）を割り当てられませんでした');
@@ -372,13 +421,24 @@ $('quit').addEventListener('click', () => {
 });
 
 // ゲーム中のメニュー（タッチ操作のとき）。開いているあいだもゲームは止まらない
+let fpsTimer = 0;
+
 $('open-menu').addEventListener('click', () => {
   releaseAllKeys();
   $('open-menu').blur(); // フォーカスが残ると、ゲーム中の Enter や Space でまた押されてしまう
   $('game-menu').hidden = false;
+  // メニューを開いているあいだ、1秒あたりのコマ数を出す（なめらかさの目安）
+  let last = frameCount;
+  $('fps').textContent = '';
+  clearInterval(fpsTimer);
+  fpsTimer = setInterval(() => {
+    $('fps').textContent = `${frameCount - last}fps`;
+    last = frameCount;
+  }, 1000);
 });
 $('resume').addEventListener('click', () => {
   $('game-menu').hidden = true;
+  clearInterval(fpsTimer);
 });
 $('quit-from-menu').addEventListener('click', () => {
   $('game-menu').hidden = true;
@@ -544,8 +604,67 @@ function fitDevice() {
 }
 new ResizeObserver(fitDevice).observe(deviceArea);
 
+// --- 画面の向き（スマホ） ---
+// 端末を傾けても縦持ち・横持ちが勝手に切り替わらないよう、ゲーム中のメニューで選んだ向きに固定する。
+// 選んだ向きと端末の向きが違うときは、本体ごと 90° 回して表示する（寝ころんで遊ぶときなど）。
+
+const LAYOUTS = ['landscape', 'landscape-flip', 'portrait'];
+const LAYOUT_STORAGE_KEY = 'pocket-runner:layout';
+let layout = 'landscape';
+let rotation = 0; // 本体を回している角度（時計回りが正）
+
+function applyLayout() {
+  if (!useTouch) return;
+  const width = deviceArea.clientWidth;
+  const height = deviceArea.clientHeight;
+  if (!width || !height) return;
+  const osLandscape = width > height;
+  // 端末を横にしたとき、OS がどちらに画面を回したか（90: 左に倒した、270: 右に倒した）
+  const osAngle = ((screen.orientation?.angle ?? window.orientation ?? 0) + 360) % 360;
+  if (layout === 'portrait') {
+    // 縦持ちは、端末の上側がいつも画面の上になるように戻す
+    rotation = osLandscape ? (osAngle === 270 ? 90 : -90) : 0;
+  } else {
+    rotation = osLandscape ? 0 : layout === 'landscape-flip' ? -90 : 90;
+  }
+  const player = $('player');
+  player.dataset.rotate = String(rotation);
+  player.style.setProperty('--area-w', `${width}px`);
+  player.style.setProperty('--area-h', `${height}px`);
+}
+
+function setLayout(next) {
+  releaseAllKeys();
+  layout = next;
+  for (const button of document.querySelectorAll('.sheet-option[data-layout]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.layout === next));
+  }
+  try {
+    localStorage.setItem(LAYOUT_STORAGE_KEY, next);
+  } catch {
+    // 保存できなくても切り替わる
+  }
+  applyLayout();
+}
+
 if (useTouch) {
   $('player').classList.add('touch', 'touch-device');
+  $('layout-setting').hidden = false;
+  let saved = null;
+  try {
+    saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
+  } catch {
+    // 読めなければ横持ちから
+  }
+  layout = LAYOUTS.includes(saved) ? saved : 'landscape';
+  for (const button of document.querySelectorAll('.sheet-option[data-layout]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.layout === layout));
+    button.addEventListener('click', () => setLayout(button.dataset.layout));
+  }
+  new ResizeObserver(applyLayout).observe(deviceArea);
+  window.addEventListener('resize', applyLayout);
+  screen.orientation?.addEventListener('change', applyLayout);
+  window.addEventListener('orientationchange', applyLayout);
 } else {
   let saved = null;
   try {
@@ -656,8 +775,10 @@ function showMove(directions) {
 
 function updateMove(event) {
   const center = moveZones[moveMode].querySelector(moveMode === 'dpad' ? '.dpad-svg' : '.well').getBoundingClientRect();
-  const dx = event.clientX - (center.left + center.width / 2);
-  const dy = event.clientY - (center.top + center.height / 2);
+  const sx = event.clientX - (center.left + center.width / 2);
+  const sy = event.clientY - (center.top + center.height / 2);
+  // 本体を回して表示しているときは、画面上の向きを本体の上での向きに直す
+  const [dx, dy] = rotation === 90 ? [sy, -sx] : rotation === -90 ? [-sy, sx] : [sx, sy];
   const directions = directionsFor(dx, dy, (center.width / 2) * DEAD_ZONE[moveMode]);
   setMoveDirections(directions);
   if (moveMode === 'stick') moveCap(dx, dy);
@@ -740,10 +861,42 @@ function resetTouchControls() {
   setMoveMode(MOVE_MODES.includes(saved) ? saved : 'dpad');
 }
 
+// ===== 画面の拡大を止める =====
+// iPhone はピンチやダブルタップで画面を拡大でき、ゲーム中に拡大されると戻せなくなる。
+// 拡大の操作を止め、それでも拡大されてしまったら元の倍率に戻す。
+
+for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(type, (event) => event.preventDefault(), { passive: false });
+}
+document.addEventListener('touchmove', (event) => {
+  if (event.touches.length > 1) event.preventDefault();
+}, { passive: false });
+document.addEventListener('dblclick', (event) => event.preventDefault(), { passive: false });
+
+function resetZoom() {
+  const meta = document.querySelector('meta[name="viewport"]');
+  const content = meta.content;
+  // viewport の設定を書き換えると、iPhone は倍率を元に戻す
+  meta.content = `${content}, minimum-scale=1`;
+  setTimeout(() => {
+    meta.content = content;
+  }, 100);
+}
+window.visualViewport?.addEventListener('resize', () => {
+  if (window.visualViewport.scale > 1.01) resetZoom();
+});
+
 // ===== はじめに =====
 
 // スマホのブラウザはフォルダごと選べないので、ZIP だけにする
 $('folder-button').hidden = useTouch;
+
+// オフラインでも開けるように、アプリのファイルを端末に保存しておく（sw.js）。
+// 開発中（localhost）は古いファイルが使われて紛らわしいので、?sw を付けたときだけ使う。
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+if ('serviceWorker' in navigator && (!isLocal || new URLSearchParams(location.search).has('sw'))) {
+  navigator.serviceWorker.register('./sw.js').catch((e) => log(`オフライン用の準備に失敗しました: ${e?.message ?? e}`, 'error'));
+}
 
 if (checkEnvironment()) {
   await renderGames();

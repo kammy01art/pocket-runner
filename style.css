@@ -31,6 +31,13 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
+/* ダブルタップでの拡大をさせない（スクロールはできる） */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -181,6 +188,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 
 /* 端末の枠を置く場所 */
 .device-area {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -266,6 +274,32 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
   background: var(--ut-black);
 }
+/* スマホで、選んだ向きと端末の向きが違うときは、本体ごと 90° 回して表示する（app.js が data-rotate を付ける）。
+   端末を傾けても勝手に縦持ち・横持ちが切り替わらないようにするため。
+   回したぶん、切り欠きやホームバーを避ける余白も、対応する辺のものに入れ替える */
+.player.touch-device[data-rotate="90"] .device,
+.player.touch-device[data-rotate="-90"] .device {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--area-h);
+  height: var(--area-w);
+}
+.player.touch-device[data-rotate="90"] .device { transform: translate(-50%, -50%) rotate(90deg); }
+.player.touch-device[data-rotate="-90"] .device { transform: translate(-50%, -50%) rotate(-90deg); }
+.player.touch-device[data-rotate="90"] .screen {
+  --safe-top: env(safe-area-inset-right, 0px);
+  --safe-right: env(safe-area-inset-bottom, 0px);
+  --safe-bottom: env(safe-area-inset-left, 0px);
+  --safe-left: env(safe-area-inset-top, 0px);
+}
+.player.touch-device[data-rotate="-90"] .screen {
+  --safe-top: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-right, 0px);
+  --safe-left: env(safe-area-inset-bottom, 0px);
+}
+
 /* PC の枠では、ホーム画面に追加したアプリの余白を再現する */
 .player.framed .screen { --safe-top: 0px; --safe-right: 0px; --safe-bottom: 34px; --safe-left: 0px; }
 .player.framed[data-view="portrait"] .screen { top: 54px; }
@@ -334,11 +368,18 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   --bezel-ink: #b3a493;
   --stripe-red: #d43a36;
   --stripe-gold: #d9aa45;
-  /* Z・X ボタン（アンダーテイルのソウルのような赤） */
+  /* Z ボタン（アンダーテイルのソウルのような赤） */
   --btn-hi: #e9585d;
   --btn-mid: #b92d33;
   --btn-lo: #85181e;
   --btn-edge: #4d0b0e;
+  --btn-print: rgb(255 255 255 / .3);
+  /* X ボタン（画面まわりの線とそろえた金色） */
+  --btn2-hi: #f4cd6a;
+  --btn2-mid: #cf9a2c;
+  --btn2-lo: #946617;
+  --btn2-edge: #4e3507;
+  --btn2-print: rgb(70 42 0 / .38);
   /* SYSTEM・MENU のゴムのボタン */
   --rubber-hi: #5c544e;
   --rubber-lo: #37312c;
@@ -551,7 +592,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   grid-area: face;
   position: relative;
   width: calc(var(--btn-x) + var(--btn-z) + var(--hit) * 2);
-  height: calc(var(--btn-z) / 2 + var(--btn-x) / 2 + var(--btn-z) * var(--face-dy) + var(--hit) * 2 + 24px);
+  height: calc(var(--btn-z) / 2 + var(--btn-x) / 2 + var(--btn-z) * var(--face-dy) + var(--hit) * 2);
 }
 /* ボタン2つが入る、斜めのくぼみ（2つのボタンの中心を結ぶ向きに傾ける） */
 .face::before {
@@ -583,9 +624,20 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   -webkit-tap-highlight-color: transparent;
 }
 .face [data-key="90"] { top: 0; right: 0; }
-.face [data-key="88"] { top: calc(var(--btn-z) / 2 - var(--btn-x) / 2 + var(--btn-z) * var(--face-dy)); left: 0; }
+.face [data-key="88"] {
+  top: calc(var(--btn-z) / 2 - var(--btn-x) / 2 + var(--btn-z) * var(--face-dy));
+  left: 0;
+  /* X は Z と色を分けて、ひと目で区別できるようにする */
+  --btn-hi: var(--btn2-hi);
+  --btn-mid: var(--btn2-mid);
+  --btn-lo: var(--btn2-lo);
+  --btn-edge: var(--btn2-edge);
+  --btn-print: var(--btn2-print);
+}
 
 .dome {
+  display: grid;
+  place-items: center;
   width: var(--btn-x);
   height: var(--btn-x);
   border-radius: 50%;
@@ -598,11 +650,14 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   transition: transform .05s, box-shadow .05s;
 }
 .face [data-key="90"] .dome { width: var(--btn-z); height: var(--btn-z); }
-.face .pad-btn b {
-  color: var(--ink);
-  font: italic 900 20px/1 var(--label-font);
-  text-shadow: 0 1px 0 var(--ink-shadow);
+/* ボタンの表面に薄く印字した文字 */
+.dome b {
+  color: var(--btn-print);
+  font: italic 900 calc(var(--btn-x) * .42)/1 var(--label-font);
+  text-shadow: 0 1px 0 rgb(255 255 255 / .12);
+  pointer-events: none;
 }
+.face [data-key="90"] .dome b { font-size: calc(var(--btn-z) * .42); }
 .face .pad-btn.on .dome {
   background: radial-gradient(circle at 36% 30%, var(--btn-mid) 0, var(--btn-lo) 55%, var(--btn-edge));
   box-shadow: 0 1px 0 var(--btn-edge), 0 2px 3px rgb(0 0 0 / .4), inset 0 3px 6px rgb(0 0 0 / .45);
@@ -722,9 +777,19 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   background: var(--ut-black);
   border: 4px solid var(--ut-white);
 }
-.sheet-title { margin: 0 0 8px; color: var(--muted); font: 400 16px/1.3 var(--font-pixel); }
+.sheet-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font: 400 16px/1.3 var(--font-pixel);
+}
+/* 1秒あたりのコマ数（なめらかさの目安） */
+.sheet-fps { color: #77777f; font-size: 13px; }
 .sheet-heading { margin: 4px 0 0; color: var(--muted); font: 400 14px/1.3 var(--font-pixel); }
 .sheet-choices { display: grid; grid-template-columns: 1fr 1fr; }
+.sheet-choices-3 .sheet-option { font-size: 16px; }
 .sheet-rule { width: 100%; margin: 8px 0; border: 0; border-top: 2px solid #333; }
 .sheet-option {
   position: relative;

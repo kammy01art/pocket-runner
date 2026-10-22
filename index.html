@@ -2,11 +2,21 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- ゲーム中に画面が拡大されないよう、拡大を止める -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <!-- 検索結果に出さない（URL を知っている人だけが使う想定） -->
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#281b14">
   <title>Pocket Runner（試作）</title>
+  <!-- ホーム画面に追加したときのアイコンと名前 -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pocket Runner">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- ドット文字のフォント（DotGothic16 / SIL Open Font License） -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -148,10 +158,10 @@
             <!-- Z（けってい）・X（もどる）。ゲームボーイの A・B ボタンの位置 -->
             <div class="face">
               <button class="pad-btn round" type="button" data-key="88" aria-label="もどる（X）">
-                <span class="dome"></span><b>X</b>
+                <span class="dome"><b>X</b></span>
               </button>
               <button class="pad-btn round" type="button" data-key="90" aria-label="けってい（Z）">
-                <span class="dome"></span><b>Z</b>
+                <span class="dome"><b>Z</b></span>
               </button>
             </div>
 
@@ -170,7 +180,16 @@
 
           <div id="game-menu" class="sheet" hidden>
             <div class="sheet-panel">
-              <p id="game-menu-title" class="sheet-title"></p>
+              <p class="sheet-title"><span id="game-menu-title"></span><span id="fps" class="sheet-fps"></span></p>
+              <!-- 画面の向き（スマホだけ）。端末を傾けても勝手には変わらない -->
+              <div id="layout-setting" class="sheet-section" hidden>
+                <p class="sheet-heading">がめんの むき</p>
+                <div class="sheet-choices sheet-choices-3" role="group" aria-label="画面の向き">
+                  <button class="sheet-option" type="button" data-layout="landscape">よこ</button>
+                  <button class="sheet-option" type="button" data-layout="landscape-flip">よこ（ぎゃく）</button>
+                  <button class="sheet-option" type="button" data-layout="portrait">たて</button>
+                </div>
+              </div>
               <p class="sheet-heading">いどうの そうさ</p>
               <div class="sheet-choices" role="group" aria-label="移動の操作">
                 <button class="sheet-option" type="button" data-move="dpad">じゅうじキー</button>

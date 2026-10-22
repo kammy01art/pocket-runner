@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Pocket Runner のアイコン。焦げ茶のゲームボーイの正面と、画面の中で光る赤いハート（ソウル） -->
+  <defs>
+    <radialGradient id="body" cx=".22" cy=".08" r="1.15">
+      <stop offset="0" stop-color="#6c4d3a"/>
+      <stop offset=".45" stop-color="#3e2c21"/>
+      <stop offset="1" stop-color="#1d140e"/>
+    </radialGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#302824"/>
+      <stop offset="1" stop-color="#130f0d"/>
+    </linearGradient>
+    <radialGradient id="screen" cx=".5" cy=".46" r=".72">
+      <stop offset="0" stop-color="#2a0808"/>
+      <stop offset=".55" stop-color="#0c0303"/>
+      <stop offset="1" stop-color="#000"/>
+    </radialGradient>
+    <radialGradient id="red" cx=".36" cy=".3" r=".8">
+      <stop offset="0" stop-color="#f06a6e"/>
+      <stop offset=".42" stop-color="#bd2e35"/>
+      <stop offset="1" stop-color="#7a141a"/>
+    </radialGradient>
+    <radialGradient id="gold" cx=".36" cy=".3" r=".8">
+      <stop offset="0" stop-color="#f8d87e"/>
+      <stop offset=".42" stop-color="#cf9a2c"/>
+      <stop offset="1" stop-color="#875b12"/>
+    </radialGradient>
+    <linearGradient id="dpad" x1="0" y1="0" x2=".4" y2="1">
+      <stop offset="0" stop-color="#3c3c42"/>
+      <stop offset="1" stop-color="#111113"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="24" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000" flood-opacity=".5"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#body)"/>
+
+  <g id="art">
+    <!-- 画面まわり。ゲームボーイと同じく右下だけ大きく丸い -->
+    <path d="M188 120h648a36 36 0 0 1 36 36v392a136 136 0 0 1-136 136H188a36 36 0 0 1-36-36V156a36 36 0 0 1 36-36z" fill="url(#bezel)" filter="url(#shadow)"/>
+    <!-- ソウルの赤と、セーブポイントの金色の2本線 -->
+    <rect x="196" y="158" width="632" height="10" rx="3" fill="#d43a36"/>
+    <rect x="196" y="180" width="632" height="10" rx="3" fill="#d9aa45"/>
+    <!-- 画面 -->
+    <rect x="232" y="224" width="560" height="388" rx="12" fill="url(#screen)"/>
+    <!-- 画面の中で光る、ドットのハート -->
+    <g filter="url(#glow)">
+      <path transform="translate(393 316) scale(34)" d="M1 0h2v1H1zM4 0h2v1H4zM0 1h7v2H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z" fill="#ff2b2b" shape-rendering="crispEdges"/>
+    </g>
+    <!-- ガラスの映り込み -->
+    <path d="M232 236a12 12 0 0 1 12-12h156L270 612h-26a12 12 0 0 1-12-12z" fill="#fff" opacity=".05"/>
+
+    <!-- 十字キー -->
+    <g filter="url(#shadow)">
+      <rect x="266" y="752" width="68" height="204" rx="12" fill="url(#dpad)"/>
+      <rect x="198" y="820" width="204" height="68" rx="12" fill="url(#dpad)"/>
+    </g>
+    <circle cx="300" cy="854" r="17" fill="#0b0b0c"/>
+
+    <!-- X（金）と Z（赤）。Z がひと回り大きい -->
+    <circle cx="672" cy="884" r="62" fill="url(#gold)" filter="url(#shadow)"/>
+    <circle cx="812" cy="806" r="74" fill="url(#red)" filter="url(#shadow)"/>
+  </g>
+</svg>
