@@ -271,11 +271,14 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .player.framed[data-view="portrait"] .screen { top: 54px; }
 .player.framed[data-view="landscape"] .screen { --safe-right: 59px; --safe-bottom: 21px; --safe-left: 59px; }
 
-/* 「画面だけ」ではゲーム画面だけを出す（画面まわりの枠は消す） */
+/* 「画面だけ」ではゲーム画面だけを出す（本体の飾りは消す） */
 .stage { flex: 1; min-height: 0; display: flex; }
 .bezel,
 .glass { display: contents; }
-.bezel-label { display: none; }
+.body-top,
+.bezel-print,
+.power,
+.brand { display: none; }
 
 #canvas {
   display: block;
@@ -288,9 +291,12 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 
 .controls { display: none; }
 
-/* ===== タッチ操作の画面 =====
-   大きさや配置は、画面全体ではなく端末（.device）の大きさを基準にする（cqmin などは .device に対する割合）。
-   そうすると、PC の枠の中でもスマホと同じ見え方になる。 */
+/* ===== タッチ操作の画面（ゲームボーイの本体） =====
+   本物のゲームボーイ（初代のグレー）を手に持って操作している見た目にする。
+   アンダーテイルの要素は、ゲーム機のコラボ本体のように「さりげなく」だけ入れる:
+   電源ランプの赤いハートと「SOUL」、画面まわりの赤と金の線、
+   「DOT MATRIX WITH DETERMINATION」、ロゴのハート、十字キーの真ん中のハートの刻印、スティックのハート。
+   大きさや配置は、画面全体ではなく端末（.device）の大きさを基準にする（cqmin などは .device に対する割合）。 */
 
 .player.touch {
   touch-action: none;
@@ -301,67 +307,143 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 }
 
 .player.touch .screen {
-  /* 当たり判定は見た目より広くする（片側ぶん） */
-  --hit: 10px;
-  --bezel-pad: 12px;
-  --label-h: 30px;
-  --stick-size: clamp(132px, 36cqmin, 172px);
-  --heart: clamp(24px, 6.5cqmin, 32px);
-  --btn-z: clamp(90px, 27.5cqmin, 120px);
-  --btn-x: clamp(64px, 19cqmin, 88px);
+  --hit: 8px;
+  --dpad-size: clamp(124px, 35cqmin, 160px);
+  --btn: clamp(70px, 22cqmin, 92px);
+  /* Z と X の縦のずれ（ボタンの大きさに対する割合）。ゲームボーイと同じく右上がりの斜めに並べる */
+  --face-y: .62;
+
+  --label-font: "Futura", "Century Gothic", "Trebuchet MS", Arial, sans-serif;
+  --navy: #2b2f7c;
+  --body-hi: #e2dfd8;
+  --body: #cfcbc3;
+  --body-lo: #b6b2a9;
+  --stripe-red: #d72a31;
+  --stripe-gold: #e0b03c;
 
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "stage" "controls";
-  background: var(--gb-body);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas: "top" "stage" "controls";
+  /* プラスチックの細かいざらつき（ノイズ）と、左上から光が当たったような陰影 */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(130% 90% at 15% 0%, var(--body-hi), var(--body) 50%, var(--body-lo));
+  color: var(--navy);
 }
 
-/* --- ゲーム画面のまわり（ゲームボーイの画面まわり） --- */
+/* 本体上端の電源スイッチまわりの刻印（縦持ちだけ） */
+.player.touch .body-top {
+  grid-area: top;
+  display: block;
+  margin: 0 18px;
+  padding: 6px 0 5px 8px;
+  border-bottom: 1px solid rgb(0 0 0 / .16);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .55);
+  color: rgb(0 0 0 / .3);
+  font: italic 700 9px/1 var(--label-font);
+  letter-spacing: .1em;
+  text-shadow: 0 1px 0 rgb(255 255 255 / .6);
+}
 
-.player.touch .stage { grid-area: stage; display: block; padding: 12px 14px 0; }
+/* --- 画面まわり --- */
+
+.player.touch .stage { grid-area: stage; display: block; padding: 12px 18px 0; }
 
 .player.touch .bezel {
-  display: flex;
-  flex-direction: column;
-  padding: var(--bezel-pad) var(--bezel-pad) 0;
-  background: var(--gb-bezel);
+  position: relative;
+  display: block;
+  padding: 26px 26px 16px;
   /* ゲームボーイの画面まわりは、右下の角だけ大きく丸い */
-  border-radius: 10px 10px 40px 10px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), inset 0 -2px 0 rgb(0 0 0 / .5);
+  border-radius: 10px 10px 44px 10px;
+  background: linear-gradient(180deg, #6e7180, #5a5d6b 55%, #4e5160);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .2),
+    inset 0 -2px 4px rgb(0 0 0 / .3),
+    0 1px 0 rgb(255 255 255 / .6),
+    0 -1px 0 rgb(0 0 0 / .12);
 }
 
-.player.touch .glass {
-  display: flex;
-  aspect-ratio: var(--game-aspect, 4 / 3);
-  max-height: 46cqh;
-  background: var(--ut-black);
-  box-shadow: 0 0 0 2px var(--ut-black), 0 0 0 3px #2c2c32;
-}
-
-.player.touch .bezel-label {
+/* 画面の上の2本線と文字。線はソウルの赤と、セーブポイントの金色 */
+.player.touch .bezel-print {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  left: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: var(--label-h);
+  gap: 7px;
   margin: 0;
-  padding-left: 2px;
-  color: #c9c9d1;
-  font: 400 13px/1 var(--font-pixel);
-  letter-spacing: .14em;
+  color: #c9cbd6;
+  font: 700 8px/1 var(--label-font);
+  letter-spacing: .1em;
+  white-space: nowrap;
 }
+.player.touch .bezel-print::before,
+.player.touch .bezel-print::after {
+  content: "";
+  height: 6px;
+  background: linear-gradient(var(--stripe-red) 0 2px, transparent 2px 4px, var(--stripe-gold) 4px 6px);
+}
+.player.touch .bezel-print::before { flex: 0 0 18px; }
+.player.touch .bezel-print::after { flex: 1; }
 
-/* 電源ランプの代わりの、ゆっくり光る赤いハート */
+/* 電源ランプ。ゲームボーイの「BATTERY」の位置に、赤いハートと「SOUL」 */
+.player.touch .power {
+  position: absolute;
+  top: 36%;
+  left: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: #b9bbc6;
+  font: 700 6.5px/1 var(--label-font);
+  letter-spacing: .06em;
+}
 .power-led {
-  width: 12px;
-  height: 11px;
+  width: 10px;
+  height: 9px;
   color: var(--ut-red);
-  filter: drop-shadow(0 0 4px rgb(255 0 0 / .7));
-  animation: beat 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px rgb(255 40 40 / .9));
+  animation: beat 2.4s ease-in-out infinite;
 }
 @keyframes beat {
   0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
+  50% { opacity: .55; }
 }
+
+.player.touch .glass {
+  position: relative;
+  display: flex;
+  aspect-ratio: var(--game-aspect, 4 / 3);
+  max-height: 44cqh;
+  border-radius: 3px;
+  background: var(--ut-black);
+  box-shadow: 0 0 0 2px #2a2c35, inset 0 0 12px rgb(0 0 0 / .8);
+}
+/* 画面のガラスの映り込み */
+.player.touch .glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(125deg, rgb(255 255 255 / .08), transparent 35%);
+  pointer-events: none;
+}
+
+/* ロゴ。「™」の位置に小さな赤いハート */
+.player.touch .brand {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 8px 0 0 6px;
+  color: var(--navy);
+  text-shadow: 0 1px 0 rgb(255 255 255 / .45);
+}
+.brand i { font: italic 400 15px/1 Georgia, "Times New Roman", serif; }
+.brand b { font: italic 900 24px/1 var(--label-font); letter-spacing: .01em; }
+.brand-heart { align-self: flex-start; width: 9px; height: 8px; color: var(--ut-red); }
 
 /* --- 操作部分。縦持ちは画面の下にまとめる --- */
 
@@ -369,182 +451,226 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   grid-area: controls;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-areas: "menu sys" "stick face" "stick speaker";
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-areas: "move face" "pills pills" ". speaker";
   align-items: center;
-  column-gap: 8px;
-  padding: 10px 14px 6px;
+  padding: 4px 14px 6px;
 }
 
-.app-menu {
-  grid-area: menu;
-  justify-self: start;
-  align-self: start;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: 3px 0;
-  border: 2px solid #55555c;
-  background: var(--ut-black);
-  color: #c9c9d1;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.app-menu:active { border-color: var(--ut-yellow); color: var(--ut-yellow); }
-
-/* 移動: アンダーテイルの戦闘の枠の中で、赤いハートが動く。
-   左側のどこに触れても、枠の真ん中からの向きで動かせる（.stick 全体が触れる範囲） */
-.stick {
-  grid-area: stick;
+/* 移動。左側のどこに触れても、十字キー（スティック）の真ん中からの向きで動く */
+.move {
+  grid-area: move;
   align-self: stretch;
   display: grid;
   place-items: center;
   touch-action: none;
-  cursor: grab;
+  cursor: pointer;
 }
-.stick.active { cursor: grabbing; }
-.stick-box {
+.player.touch:not([data-move="stick"]) .stick,
+.player.touch[data-move="stick"] .dpad { display: none; }
+
+/* 十字キーやスティックが入る、丸いくぼみ */
+.well {
   position: relative;
-  width: var(--stick-size);
-  height: var(--stick-size);
-  background: var(--ut-black);
-  border: 3px solid var(--ut-white);
+  display: grid;
+  place-items: center;
+  width: calc(var(--dpad-size) * 1.14);
+  height: calc(var(--dpad-size) * 1.14);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgb(0 0 0 / .1), rgb(0 0 0 / .04) 62%, transparent 71%);
 }
-.stick-heart {
+
+.dpad-svg {
+  width: var(--dpad-size);
+  height: var(--dpad-size);
+  overflow: visible;
+  filter: drop-shadow(0 3px 2px rgb(0 0 0 / .4)) drop-shadow(0 1px 0 rgb(0 0 0 / .3));
+}
+.dpad .press { fill: rgb(0 0 0 / .5); opacity: 0; }
+.dpad .press.on { opacity: 1; }
+
+/* スティック（3DS のスライドパッドのような、くぼみの中で動く丸いキャップ） */
+.stick .well {
+  background: radial-gradient(circle at 50% 45%, #2b2b30, #1c1c20 62%);
+  box-shadow: inset 0 3px 6px rgb(0 0 0 / .6), 0 1px 0 rgb(255 255 255 / .55), 0 0 0 3px rgb(0 0 0 / .07);
+}
+.stick-cap {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: var(--heart);
-  height: calc(var(--heart) * 6 / 7);
-  margin: calc(var(--heart) * -3 / 7) 0 0 calc(var(--heart) / -2);
-  color: var(--ut-red);
+  display: grid;
+  place-items: center;
+  width: calc(var(--dpad-size) * .62);
+  height: calc(var(--dpad-size) * .62);
+  margin: calc(var(--dpad-size) * -.31) 0 0 calc(var(--dpad-size) * -.31);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 36%, #f2f0ea, #d6d2ca 55%, #b2aea5);
+  box-shadow: 0 4px 6px rgb(0 0 0 / .45), inset 0 -3px 4px rgb(0 0 0 / .18), inset 0 2px 2px rgb(255 255 255 / .8);
   transform: translate(var(--hx, 0px), var(--hy, 0px));
   transition: transform .12s ease-out;
 }
-.stick.active .stick-heart { transition: none; }
+/* 指を置くところの浅いくぼみ */
+.stick-cap::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / .14), 0 1px 0 rgb(255 255 255 / .6);
+}
+.stick-heart { position: relative; width: 20%; height: 17%; color: var(--ut-red); }
+.stick.active .stick-cap { transition: none; }
 
-/* 決定（Z）・もどる（X）。戦闘のコマンドボタンのようなオレンジの枠で、押すと黄色。
-   いちばんよく押す Z は大きく右上に、X は左下に斜めに並べる */
+/* Z（けってい）・X（もどる）。ゲームボーイの A・B ボタンと同じ、赤紫のふっくらしたボタン */
 .face {
   grid-area: face;
   position: relative;
-  /* Z と X の離し方（X の大きさに対する割合）。押し間違えないよう、すき間を 15px ほど空ける */
-  width: calc(var(--btn-z) + var(--btn-x) * var(--face-x, .7) + var(--hit) * 2);
-  height: calc(var(--btn-z) + var(--btn-x) * var(--face-y, .9) + var(--hit) * 2);
+  width: calc(var(--btn) * 2 + var(--hit) * 2);
+  height: calc(var(--btn) * (1 + var(--face-y)) + var(--hit) * 2 + 24px);
 }
-.face .pad-btn { position: absolute; }
-.face [data-key="90"] { top: 0; right: 0; }
-.face [data-key="88"] { bottom: 0; left: 0; }
+/* ボタン2つが入る、斜めのくぼみ */
+.face::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--hit) + var(--btn) / 2 + var(--btn) * var(--face-y) / 2);
+  left: 50%;
+  width: calc(hypot(var(--btn), var(--btn) * var(--face-y)) + var(--btn) + 14px);
+  height: calc(var(--btn) + 14px);
+  border-radius: 999px;
+  background: rgb(0 0 0 / .07);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / .14), 0 1px 0 rgb(255 255 255 / .45);
+  transform: translate(-50%, -50%) rotate(calc(atan2(var(--face-y), 1) * -1));
+}
 
-.pad-btn {
+.face .pad-btn {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding: var(--hit);
   border: 0;
   background: none;
-  color: inherit;
-  font: inherit;
   cursor: pointer;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
-.pad-btn span {
+.face [data-key="90"] { top: 0; right: 0; }
+.face [data-key="88"] { top: calc(var(--btn) * var(--face-y)); left: 0; }
+
+.dome {
+  width: var(--btn);
+  height: var(--btn);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #e0538a 0, #b02c62 32%, #8a1f4b 70%, #6e173b);
+  box-shadow:
+    0 3px 0 #5a1131,
+    0 6px 8px rgb(0 0 0 / .3),
+    inset 0 -4px 6px rgb(0 0 0 / .25),
+    inset 0 2px 3px rgb(255 255 255 / .3);
+  transition: transform .05s, box-shadow .05s;
+}
+.face .pad-btn b {
+  color: var(--navy);
+  font: italic 900 20px/1 var(--label-font);
+  text-shadow: 0 1px 0 rgb(255 255 255 / .5);
+}
+.face .pad-btn.on .dome {
+  background: radial-gradient(circle at 36% 30%, #c94479 0, #9a2656 40%, #761a40);
+  box-shadow: 0 1px 0 #5a1131, 0 2px 3px rgb(0 0 0 / .3), inset 0 3px 6px rgb(0 0 0 / .4);
+  transform: translateY(2px);
+}
+
+/* ゲームボーイの SELECT・START の位置にある、斜めのゴムのボタン */
+.pills {
+  grid-area: pills;
+  justify-self: center;
+  display: flex;
+  gap: 22px;
+  padding: 6px 0 2px;
+}
+.pill-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: var(--btn-x);
-  height: var(--btn-x);
-  border: 3px solid var(--ut-orange);
-  border-radius: 50%;
-  background: var(--ut-black);
-  color: var(--ut-orange);
-  /* 押せそうに見える厚み */
-  box-shadow: 0 4px 0 var(--ut-orange-deep);
+  gap: 6px;
+  padding: 10px 6px 4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+  transform: rotate(-25deg);
+  -webkit-tap-highlight-color: transparent;
+}
+.rubber {
+  width: 54px;
+  height: 15px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #a3a4ab, #7e7f87);
+  box-shadow: 0 0 0 3px rgb(0 0 0 / .07), 0 2px 0 #5d5e65, inset 0 1px 0 rgb(255 255 255 / .4);
   transition: transform .05s;
 }
-.pad-btn b { font: 400 calc(var(--btn-x) * .36)/1 var(--font-pixel); }
-.pad-btn small { font: 400 11px/1 var(--font-pixel); }
-.pad-btn.primary span { width: var(--btn-z); height: var(--btn-z); border-width: 4px; }
-.pad-btn.primary b { font-size: calc(var(--btn-z) * .36); }
-.pad-btn.primary small { font-size: 13px; }
-.pad-btn.on span {
-  border-color: var(--ut-yellow);
-  background: var(--ut-yellow);
-  color: var(--ut-black);
-  box-shadow: 0 1px 0 #3d3d00;
-  transform: translateY(3px);
+.pill-btn b {
+  color: var(--navy);
+  font: italic 800 10px/1 var(--label-font);
+  letter-spacing: .08em;
+  text-shadow: 0 1px 0 rgb(255 255 255 / .5);
+}
+.pill-btn.on .rubber,
+.pill-btn:active .rubber {
+  box-shadow: 0 0 0 3px rgb(0 0 0 / .07), 0 1px 0 #5d5e65, inset 0 1px 2px rgb(0 0 0 / .3);
+  transform: translateY(1px);
 }
 
-/* メニュー（C）は四角いボタンにして、Z・X と区別する */
-.pad-btn.pill {
-  grid-area: sys;
-  justify-self: end;
-  align-self: start;
-  padding: 6px var(--hit);
-}
-.pad-btn.pill span {
-  flex-direction: row;
-  gap: 8px;
-  width: auto;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 0;
-  box-shadow: 0 3px 0 var(--ut-orange-deep);
-}
-.pad-btn.pill b { font-size: 18px; }
-.pad-btn.pill small { font-size: 13px; }
-
-/* ゲームボーイのスピーカーの穴（飾り） */
+/* スピーカーの穴（飾り） */
 .speaker {
   grid-area: speaker;
   justify-self: end;
   display: flex;
   gap: 7px;
-  padding: 4px 10px 8px;
+  padding: 2px 8px 10px;
   transform: rotate(-28deg);
   pointer-events: none;
 }
 .speaker i {
   width: 6px;
-  height: 40px;
+  height: 42px;
   border-radius: 3px;
-  background: #050506;
-  box-shadow: inset 0 1px 1px rgb(0 0 0 / .8), 0 1px 0 rgb(255 255 255 / .05);
+  background: linear-gradient(90deg, #8f8b83, #a9a59d);
+  box-shadow: inset 1px 1px 2px rgb(0 0 0 / .35), 0 1px 0 rgb(255 255 255 / .55);
 }
 
-/* --- 横持ち: ゲーム画面を真ん中に、操作を左右に分ける --- */
+/* --- 横持ち: ゲームボーイアドバンスのように、画面を真ん中に、操作を左右に分ける --- */
 @container device (orientation: landscape) {
   .player.touch .screen {
     /* 左右の操作に使う幅。ボタンを大きくするため、ゲーム画面より操作を優先する */
     --side: 176px;
-    --stick-size: clamp(116px, 36cqmin, 150px);
-    --heart: clamp(22px, 6cqmin, 30px);
-    --btn-z: clamp(84px, 26cqmin, 104px);
-    --btn-x: clamp(60px, 18cqmin, 76px);
-    /* 横持ちは左右の幅が限られるので、X を Z の下寄りに置いて縦に離す */
-    --face-x: .45;
-    --face-y: 1.08;
+    --dpad-size: clamp(108px, 32cqmin, 140px);
+    --btn: clamp(62px, 19cqmin, 78px);
 
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "menu stage sys" "stick stage face";
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "move stage face" "pills stage speaker";
   }
+  .player.touch .body-top { display: none; }
   .player.touch .controls { display: contents; }
   .player.touch .stage {
+    display: flex;
+    flex-direction: column;
     align-self: center;
     height: calc(100cqh - var(--safe-top) - var(--safe-bottom));
-    /* 画面まわりの枠の中で、ゲーム画面がちょうど収まる幅（左右に操作を置く幅は残す） */
-    width: calc((100cqh - var(--safe-top) - var(--safe-bottom) - 16px - var(--bezel-pad) - var(--label-h)) * (var(--game-aspect, 4 / 3)) + 2 * var(--bezel-pad));
+    /* 画面まわりの中で、ゲーム画面がちょうど収まる幅（左右に操作を置く幅は残す） */
+    width: calc((100cqh - var(--safe-top) - var(--safe-bottom) - 20px - 42px - 30px) * (var(--game-aspect, 4 / 3)) + 52px);
     max-width: calc(100cqw - 2 * var(--side) - var(--safe-left) - var(--safe-right));
-    padding: 8px 0;
+    padding: 10px 0;
   }
-  .player.touch .bezel { height: 100%; }
+  .player.touch .bezel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .player.touch .glass { flex: 1; min-height: 0; aspect-ratio: auto; max-height: none; }
-  .app-menu { margin: 10px; }
-  .pad-btn.pill { margin: 4px; }
+  .player.touch .brand { margin-top: 6px; }
+  .brand b { font-size: 20px; }
   .face { justify-self: center; align-self: center; }
-  .speaker { display: none; }
+  .pills { gap: 12px; align-self: start; }
+  .speaker { justify-self: center; align-self: center; margin-top: -16px; padding: 0 8px; }
+  .speaker i { height: 28px; }
 }
 
 /* ===== ゲーム中のメニュー（アンダーテイルの会話の枠） ===== */
@@ -556,17 +682,20 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgb(0 0 0 / .7);
+  background: rgb(0 0 0 / .72);
 }
 .sheet-panel {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   width: min(340px, 100%);
   padding: 18px 22px;
   background: var(--ut-black);
   border: 4px solid var(--ut-white);
 }
-.sheet-title { margin: 0 0 10px; color: var(--muted); font: 400 16px/1.3 var(--font-pixel); }
+.sheet-title { margin: 0 0 8px; color: var(--muted); font: 400 16px/1.3 var(--font-pixel); }
+.sheet-heading { margin: 4px 0 0; color: var(--muted); font: 400 14px/1.3 var(--font-pixel); }
+.sheet-choices { display: grid; grid-template-columns: 1fr 1fr; }
+.sheet-rule { width: 100%; margin: 8px 0; border: 0; border-top: 2px solid #333; }
 .sheet-option {
   position: relative;
   display: flex;
@@ -581,6 +710,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+.sheet-choices .sheet-option { padding-left: 28px; font-size: 17px; }
 /* 選んでいる項目には、ハートのカーソルを出して黄色にする */
 .sheet-option::before {
   content: "";
@@ -593,15 +723,19 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6'%3E%3Cpath d='M1 0h2v1H1zM4 0h2v1H4zM0 1h7v2H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z'/%3E%3C/svg%3E") center / contain no-repeat;
   opacity: 0;
 }
+.sheet-choices .sheet-option::before { width: 15px; height: 13px; }
 .sheet-option:hover,
 .sheet-option:focus-visible,
-.sheet-option:active { color: var(--ut-yellow); outline: none; }
+.sheet-option:active,
+.sheet-option[aria-pressed="true"] { color: var(--ut-yellow); outline: none; }
 .sheet-option:hover::before,
 .sheet-option:focus-visible::before,
-.sheet-option:active::before { opacity: 1; }
+.sheet-option:active::before,
+.sheet-option[aria-pressed="true"]::before { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .power-led { animation: none; }
-  .stick-heart,
-  .pad-btn span { transition: none; }
+  .stick-cap,
+  .dome,
+  .rubber { transition: none; }
 }

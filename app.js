@@ -374,6 +374,7 @@ $('quit').addEventListener('click', () => {
 // ゲーム中のメニュー（タッチ操作のとき）。開いているあいだもゲームは止まらない
 $('open-menu').addEventListener('click', () => {
   releaseAllKeys();
+  $('open-menu').blur(); // フォーカスが残ると、ゲーム中の Enter や Space でまた押されてしまう
   $('game-menu').hidden = false;
 });
 $('resume').addEventListener('click', () => {
@@ -487,7 +488,7 @@ const keyboardDirections = new Set();
 function showKey(key, on) {
   if (key in ARROW_DIRECTIONS) {
     keyboardDirections[on ? 'add' : 'delete'](ARROW_DIRECTIONS[key]);
-    if (stickPointer === null) showHeartToward(keyboardDirections);
+    if (movePointer === null) showMove(keyboardDirections);
     return;
   }
   const selector = BUTTON_VISUALS[key];
@@ -574,21 +575,40 @@ function buzz() {
   navigator.vibrate?.(8); // Android のみ。iPhone のブラウザは振動に対応していない
 }
 
-// --- 移動（スティック） ---
-// アンダーテイルの戦闘のように、白い枠の中で赤いハートが動く。
-// 左側のどこに触れても、枠の真ん中から指への向きで移動する。指を離さずに向きを変えられる。
+// --- 移動（十字キー / スティック） ---
+// どちらも、左側のどこに触れても、十字キー（スティック）の真ん中から指への向きで移動する。
+// 指を離さずに向きを変えられる。どちらを使うかは、ゲーム中のメニューで切り替えられる（選んだものは覚えておく）。
 
 const DIRECTION_KEYS = { up: 38, right: 39, down: 40, left: 37 };
 const DIRECTION_ANGLES = { right: 0, down: 90, left: 180, up: 270 };
 // 上下左右それぞれの真上から ±30° は1方向だけ、そのあいだの30°は斜め（2方向）
 const DIRECTION_REACH = 60;
-const DEAD_ZONE = 0.2; // 枠の半分の大きさに対する、真ん中の反応しない範囲
+// 真ん中の反応しない範囲（十字キー・スティックの半径に対する割合）
+const DEAD_ZONE = { dpad: 0.24, stick: 0.2 };
 
-const stick = $('stick');
-const stickBox = stick.querySelector('.stick-box');
-const stickHeart = stick.querySelector('.stick-heart');
-let stickPointer = null;
-let stickDirections = new Set();
+const MOVE_MODES = ['dpad', 'stick'];
+const MOVE_STORAGE_KEY = 'pocket-runner:move';
+
+const moveZones = { dpad: $('dpad'), stick: $('stick') };
+const stickWell = moveZones.stick.querySelector('.well');
+const stickCap = moveZones.stick.querySelector('.stick-cap');
+let moveMode = 'dpad';
+let movePointer = null;
+let moveDirections = new Set();
+
+function setMoveMode(mode) {
+  releaseAllKeys();
+  moveMode = mode;
+  $('player').dataset.move = mode;
+  for (const button of document.querySelectorAll('[data-move]')) {
+    if (button.tagName === 'BUTTON') button.setAttribute('aria-pressed', String(button.dataset.move === mode));
+  }
+  try {
+    localStorage.setItem(MOVE_STORAGE_KEY, mode);
+  } catch {
+    // 保存できなくても切り替わる
+  }
+}
 
 function directionsFor(dx, dy, deadZone) {
   if (Math.hypot(dx, dy) < deadZone) return new Set();
@@ -601,58 +621,75 @@ function directionsFor(dx, dy, deadZone) {
   return directions;
 }
 
-function setStickDirections(next) {
-  for (const name of stickDirections) if (!next.has(name)) releaseKey(DIRECTION_KEYS[name]);
-  for (const name of next) if (!stickDirections.has(name)) pressKey(DIRECTION_KEYS[name]);
-  if (next.size > stickDirections.size) buzz();
-  stickDirections = next;
+function setMoveDirections(next) {
+  for (const name of moveDirections) if (!next.has(name)) releaseKey(DIRECTION_KEYS[name]);
+  for (const name of next) if (!moveDirections.has(name)) pressKey(DIRECTION_KEYS[name]);
+  if (next.size > moveDirections.size) buzz();
+  moveDirections = next;
 }
 
-// ハートを枠の中で動かす。dx, dy は枠の真ん中からのずれ（画面上の px）
-function moveHeart(dx, dy) {
-  // PC の枠は縮めて表示しているので、画面上の px を枠の中の px に直す
-  const scale = stickBox.getBoundingClientRect().width / stickBox.offsetWidth || 1;
-  const limit = (stickBox.clientWidth - stickHeart.getBoundingClientRect().width / scale) / 2 - 2;
-  const clamp = (v) => (limit > 0 ? Math.max(-limit, Math.min(limit, v / scale)) : 0);
-  stickBox.style.setProperty('--hx', `${clamp(dx)}px`);
-  stickBox.style.setProperty('--hy', `${clamp(dy)}px`);
+// スティックのキャップを、くぼみの中で動かす。dx, dy は真ん中からのずれ（画面上の px）
+function moveCap(dx, dy) {
+  // PC の枠は縮めて表示しているので、画面上の px を本体の中の px に直す
+  const scale = stickWell.getBoundingClientRect().width / stickWell.offsetWidth || 1;
+  const limit = (stickWell.offsetWidth - stickCap.offsetWidth) / 2;
+  let x = dx / scale;
+  let y = dy / scale;
+  const length = Math.hypot(x, y);
+  if (length > limit) {
+    x = (x / length) * Math.max(limit, 0);
+    y = (y / length) * Math.max(limit, 0);
+  }
+  stickWell.style.setProperty('--hx', `${x}px`);
+  stickWell.style.setProperty('--hy', `${y}px`);
 }
 
-// キーボードの矢印キーで動かしたときは、押している向きの枠の端までハートを寄せる
-function showHeartToward(directions) {
+// 押している向きを見た目に映す（十字キーはその腕が沈み、スティックはその向きに倒れる）
+function showMove(directions) {
+  for (const press of moveZones.dpad.querySelectorAll('.press')) {
+    press.classList.toggle('on', directions.has(press.dataset.dir));
+  }
   const x = (directions.has('right') ? 1 : 0) - (directions.has('left') ? 1 : 0);
   const y = (directions.has('down') ? 1 : 0) - (directions.has('up') ? 1 : 0);
-  moveHeart(x * 1000, y * 1000);
+  if (movePointer === null) moveCap(x * 1000, y * 1000);
 }
 
-function updateStick(event) {
-  const rect = stickBox.getBoundingClientRect();
-  const dx = event.clientX - (rect.left + rect.width / 2);
-  const dy = event.clientY - (rect.top + rect.height / 2);
-  moveHeart(dx, dy);
-  setStickDirections(directionsFor(dx, dy, (rect.width / 2) * DEAD_ZONE));
+function updateMove(event) {
+  const center = moveZones[moveMode].querySelector(moveMode === 'dpad' ? '.dpad-svg' : '.well').getBoundingClientRect();
+  const dx = event.clientX - (center.left + center.width / 2);
+  const dy = event.clientY - (center.top + center.height / 2);
+  const directions = directionsFor(dx, dy, (center.width / 2) * DEAD_ZONE[moveMode]);
+  setMoveDirections(directions);
+  if (moveMode === 'stick') moveCap(dx, dy);
+  else showMove(directions);
 }
 
-stick.addEventListener('pointerdown', (event) => {
-  if (!running || stickPointer !== null) return;
-  event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
-  stickPointer = event.pointerId;
-  capturePointer(stick, event);
-  stick.classList.add('active');
-  updateStick(event);
-});
-stick.addEventListener('pointermove', (event) => {
-  if (event.pointerId === stickPointer) updateStick(event);
-});
-for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-  stick.addEventListener(type, (event) => {
-    if (event.pointerId !== stickPointer) return;
-    stickPointer = null;
-    stick.classList.remove('active');
-    setStickDirections(new Set());
-    moveHeart(0, 0);
-    unlockAudio();
+for (const [mode, zone] of Object.entries(moveZones)) {
+  zone.addEventListener('pointerdown', (event) => {
+    if (!running || movePointer !== null || mode !== moveMode) return;
+    event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
+    movePointer = event.pointerId;
+    capturePointer(zone, event);
+    zone.classList.add('active');
+    updateMove(event);
   });
+  zone.addEventListener('pointermove', (event) => {
+    if (event.pointerId === movePointer) updateMove(event);
+  });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    zone.addEventListener(type, (event) => {
+      if (event.pointerId !== movePointer) return;
+      movePointer = null;
+      zone.classList.remove('active');
+      setMoveDirections(new Set());
+      showMove(new Set());
+      unlockAudio();
+    });
+  }
+}
+
+for (const button of document.querySelectorAll('.sheet-option[data-move]')) {
+  button.addEventListener('click', () => setMoveMode(button.dataset.move));
 }
 
 // --- Z / X / C ボタン ---
@@ -683,14 +720,24 @@ for (const button of document.querySelectorAll('.pad-btn')) {
 
 // 見た目と「押している指」の記録だけを消す（キーを離す処理は releaseAllKeys が行う）
 function resetTouchControls() {
-  stickPointer = null;
-  stickDirections = new Set();
+  movePointer = null;
+  moveDirections = new Set();
   keyboardDirections.clear();
-  stick.classList.remove('active');
-  stickBox.style.setProperty('--hx', '0px');
-  stickBox.style.setProperty('--hy', '0px');
+  for (const zone of Object.values(moveZones)) zone.classList.remove('active');
+  stickWell.style.setProperty('--hx', '0px');
+  stickWell.style.setProperty('--hy', '0px');
   buttonPointers.clear();
   document.querySelectorAll('.controls .on').forEach((el) => el.classList.remove('on'));
+}
+
+{
+  let saved = null;
+  try {
+    saved = localStorage.getItem(MOVE_STORAGE_KEY);
+  } catch {
+    // 読めなければ十字キー
+  }
+  setMoveMode(MOVE_MODES.includes(saved) ? saved : 'dpad');
 }
 
 // ===== はじめに =====

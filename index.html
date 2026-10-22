@@ -82,41 +82,86 @@
       <div class="device">
         <div class="device-status" aria-hidden="true"><span>9:41</span><i class="island"></i></div>
         <div class="screen">
-          <!-- ゲーム画面と、そのまわりの枠（ゲームボーイの画面まわり） -->
+          <!-- 本体上端の電源スイッチの刻印（飾り） -->
+          <p class="body-top" aria-hidden="true">◀ OFF · ON ▶</p>
+
+          <!-- ゲーム画面と、そのまわり（ゲームボーイの画面まわり） -->
           <div class="stage">
             <div class="bezel">
+              <p class="bezel-print" aria-hidden="true">DOT MATRIX WITH DETERMINATION</p>
+              <p class="power" aria-hidden="true">
+                <svg class="power-led"><use href="#heart"/></svg>
+                <span>SOUL</span>
+              </p>
               <div class="glass">
                 <canvas id="canvas" tabindex="0"></canvas>
               </div>
-              <p class="bezel-label" aria-hidden="true">
-                <svg class="power-led"><use href="#heart"/></svg>
-                <span>POCKET RUNNER</span>
-              </p>
             </div>
+            <p class="brand" aria-hidden="true"><i>Pocket</i><b>RUNNER</b><svg class="brand-heart"><use href="#heart"/></svg></p>
           </div>
 
           <!-- タッチ操作。横持ちは画面の左右、縦持ちは画面の下に並ぶ -->
           <div class="controls">
-            <button id="open-menu" class="app-menu" type="button" aria-label="メニュー">
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"/></svg>
-            </button>
-            <button class="pad-btn pill" type="button" data-key="67" aria-label="メニュー（C）">
-              <span><b>C</b><small>メニュー</small></span>
-            </button>
-
-            <!-- 移動。白い枠の中で赤いハートが動く。左側のどこに触れても操作できる -->
-            <div id="stick" class="stick" role="group" aria-label="移動">
-              <div class="stick-box">
-                <svg class="stick-heart" aria-hidden="true"><use href="#heart"/></svg>
+            <!-- 移動（十字キー）。左側のどこに触れても、十字キーの真ん中からの向きで動く -->
+            <div id="dpad" class="move dpad" role="group" aria-label="移動（十字キー）">
+              <div class="well">
+                <svg class="dpad-svg" viewBox="0 0 100 100" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="dpad-face" x1="0" y1="0" x2=".45" y2="1">
+                      <stop offset="0" stop-color="#4a4a51"/>
+                      <stop offset=".5" stop-color="#29292e"/>
+                      <stop offset="1" stop-color="#18181b"/>
+                    </linearGradient>
+                    <radialGradient id="dpad-dimple" cx=".5" cy=".42" r=".6">
+                      <stop offset="0" stop-color="#121214"/>
+                      <stop offset="1" stop-color="#2b2b30"/>
+                    </radialGradient>
+                    <path id="dpad-shape" d="M37 3h26a4 4 0 0 1 4 4v26h26a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H67v26a4 4 0 0 1-4 4H37a4 4 0 0 1-4-4V67H7a4 4 0 0 1-4-4V37a4 4 0 0 1 4-4h26V7a4 4 0 0 1 4-4z"/>
+                    <clipPath id="dpad-clip"><use href="#dpad-shape"/></clipPath>
+                  </defs>
+                  <use href="#dpad-shape" fill="url(#dpad-face)"/>
+                  <g clip-path="url(#dpad-clip)">
+                    <!-- 押している向きは暗くして、沈んで見せる -->
+                    <rect class="press" data-dir="up" x="33" y="0" width="34" height="36"/>
+                    <rect class="press" data-dir="down" x="33" y="64" width="34" height="36"/>
+                    <rect class="press" data-dir="left" x="0" y="33" width="36" height="34"/>
+                    <rect class="press" data-dir="right" x="64" y="33" width="36" height="34"/>
+                  </g>
+                  <use href="#dpad-shape" fill="none" stroke="rgb(255 255 255 / .12)" stroke-width=".8"/>
+                  <g class="dpad-arrows" fill="#5a5a62">
+                    <path d="M50 9l5 7h-10z"/><path d="M50 91l5-7h-10z"/><path d="M9 50l7-5v10z"/><path d="M91 50l-7-5v10z"/>
+                  </g>
+                  <circle cx="50" cy="50" r="9" fill="url(#dpad-dimple)"/>
+                  <!-- 真ん中のくぼみに、うっすらハートの刻印 -->
+                  <use href="#heart" x="45.5" y="46.2" width="9" height="7.7" style="color: rgb(255 255 255 / .1)"/>
+                </svg>
               </div>
             </div>
 
+            <!-- 移動（スティック）。設定で十字キーと切り替えられる -->
+            <div id="stick" class="move stick" role="group" aria-label="移動（スティック）">
+              <div class="well">
+                <div class="stick-cap"><svg class="stick-heart" aria-hidden="true"><use href="#heart"/></svg></div>
+              </div>
+            </div>
+
+            <!-- Z（けってい）・X（もどる）。ゲームボーイの A・B ボタンの位置 -->
             <div class="face">
               <button class="pad-btn round" type="button" data-key="88" aria-label="もどる（X）">
-                <span><b>X</b><small>もどる</small></span>
+                <span class="dome"></span><b>X</b>
               </button>
-              <button class="pad-btn round primary" type="button" data-key="90" aria-label="けってい（Z）">
-                <span><b>Z</b><small>けってい</small></span>
+              <button class="pad-btn round" type="button" data-key="90" aria-label="けってい（Z）">
+                <span class="dome"></span><b>Z</b>
+              </button>
+            </div>
+
+            <!-- ゲームボーイの SELECT・START の位置。左はアプリのメニュー、右はゲームのメニュー（C） -->
+            <div class="pills">
+              <button id="open-menu" class="pill-btn" type="button" aria-label="アプリのメニュー">
+                <span class="rubber"></span><b>SYSTEM</b>
+              </button>
+              <button class="pill-btn pad-btn" type="button" data-key="67" aria-label="ゲームのメニュー（C）">
+                <span class="rubber"></span><b>MENU</b>
               </button>
             </div>
 
@@ -126,6 +171,12 @@
           <div id="game-menu" class="sheet" hidden>
             <div class="sheet-panel">
               <p id="game-menu-title" class="sheet-title"></p>
+              <p class="sheet-heading">いどうの そうさ</p>
+              <div class="sheet-choices" role="group" aria-label="移動の操作">
+                <button class="sheet-option" type="button" data-move="dpad">じゅうじキー</button>
+                <button class="sheet-option" type="button" data-move="stick">スティック</button>
+              </div>
+              <hr class="sheet-rule">
               <button id="resume" class="sheet-option" type="button">ゲームにもどる</button>
               <button id="quit-from-menu" class="sheet-option" type="button">しゅうりょうする</button>
             </div>
