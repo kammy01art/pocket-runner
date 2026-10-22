@@ -479,14 +479,18 @@ window.addEventListener('keyup', (event) => {
   showKey(key, false);
 });
 
-// キーボードで押したキーも、画面のボタンを光らせて見せる（PC で見た目を確かめやすくするため）
-const KEY_VISUALS = {
-  37: '.arm.left', 38: '.arm.up', 39: '.arm.right', 40: '.arm.down',
-  90: '.pad-btn[data-key="90"]', 88: '.pad-btn[data-key="88"]', 67: '.pad-btn[data-key="67"]',
-};
+// キーボードで押したキーも、画面の操作部分に映して見せる（PC で見た目を確かめやすくするため）
+const BUTTON_VISUALS = { 90: '.pad-btn[data-key="90"]', 88: '.pad-btn[data-key="88"]', 67: '.pad-btn[data-key="67"]' };
+const ARROW_DIRECTIONS = { 37: 'left', 38: 'up', 39: 'right', 40: 'down' };
+const keyboardDirections = new Set();
 
 function showKey(key, on) {
-  const selector = KEY_VISUALS[key];
+  if (key in ARROW_DIRECTIONS) {
+    keyboardDirections[on ? 'add' : 'delete'](ARROW_DIRECTIONS[key]);
+    if (stickPointer === null) showHeartToward(keyboardDirections);
+    return;
+  }
+  const selector = BUTTON_VISUALS[key];
   if (selector) document.querySelector(`.controls ${selector}`)?.classList.toggle('on', on);
 }
 window.addEventListener('blur', releaseAllKeys);
@@ -502,10 +506,11 @@ $('player').addEventListener('contextmenu', (event) => event.preventDefault());
 
 // --- 表示の切り替え（PC） ---
 // スマホでは画面いっぱいにタッチ操作を出す。PC では iPhone 15 Pro の大きさの枠で
-// 「縦持ち」「横持ち」を再現するか、ゲーム画面だけを大きく出すかを選べる（選んだものは覚えておく）。
+// 「横持ち」「縦持ち」を再現するか、ゲーム画面だけを大きく出すかを選べる（選んだものは覚えておく）。
+// 遊ぶときは横持ちが多い想定なので、最初は横持ち。
 
-const VIEWS = ['portrait', 'landscape', 'plain'];
-const VIEW_STORAGE_KEY = 'pocket-runner:view';
+const VIEWS = ['landscape', 'portrait', 'plain'];
+const VIEW_STORAGE_KEY = 'pocket-runner:view:v2'; // 最初の表示を横持ちに変えたので、前の記録は使わない
 
 function setView(view) {
   const player = $('player');
@@ -545,9 +550,9 @@ if (useTouch) {
   try {
     saved = localStorage.getItem(VIEW_STORAGE_KEY);
   } catch {
-    // 読めなければ縦持ちから
+    // 読めなければ横持ちから
   }
-  setView(VIEWS.includes(saved) ? saved : 'portrait');
+  setView(VIEWS.includes(saved) ? saved : 'landscape');
   for (const button of document.querySelectorAll('.view-switch button')) {
     button.addEventListener('click', () => {
       setView(button.dataset.view);
@@ -569,25 +574,24 @@ function buzz() {
   navigator.vibrate?.(8); // Android のみ。iPhone のブラウザは振動に対応していない
 }
 
-// --- 十字キー ---
-// 指を離さずに滑らせて方向を変えられる。真ん中付近は「どこも押していない」扱い。
+// --- 移動（スティック） ---
+// アンダーテイルの戦闘のように、白い枠の中で赤いハートが動く。
+// 左側のどこに触れても、枠の真ん中から指への向きで移動する。指を離さずに向きを変えられる。
 
 const DIRECTION_KEYS = { up: 38, right: 39, down: 40, left: 37 };
 const DIRECTION_ANGLES = { right: 0, down: 90, left: 180, up: 270 };
 // 上下左右それぞれの真上から ±30° は1方向だけ、そのあいだの30°は斜め（2方向）
 const DIRECTION_REACH = 60;
-const DEAD_ZONE = 0.12; // 十字キーの幅に対する、真ん中の反応しない範囲
+const DEAD_ZONE = 0.2; // 枠の半分の大きさに対する、真ん中の反応しない範囲
 
-const dpad = $('dpad');
-const dpadCross = dpad.querySelector('.dpad-cross');
-let dpadPointer = null;
-let dpadDirections = new Set();
+const stick = $('stick');
+const stickBox = stick.querySelector('.stick-box');
+const stickHeart = stick.querySelector('.stick-heart');
+let stickPointer = null;
+let stickDirections = new Set();
 
-function directionsAt(event) {
-  const rect = dpadCross.getBoundingClientRect();
-  const dx = event.clientX - (rect.left + rect.width / 2);
-  const dy = event.clientY - (rect.top + rect.height / 2);
-  if (Math.hypot(dx, dy) < rect.width * DEAD_ZONE) return new Set();
+function directionsFor(dx, dy, deadZone) {
+  if (Math.hypot(dx, dy) < deadZone) return new Set();
   const angle = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360; // 0° が右、90° が下
   const directions = new Set();
   for (const [name, center] of Object.entries(DIRECTION_ANGLES)) {
@@ -597,29 +601,56 @@ function directionsAt(event) {
   return directions;
 }
 
-function setDpadDirections(next) {
-  for (const name of dpadDirections) if (!next.has(name)) releaseKey(DIRECTION_KEYS[name]);
-  for (const name of next) if (!dpadDirections.has(name)) pressKey(DIRECTION_KEYS[name]);
-  if (next.size > dpadDirections.size) buzz();
-  dpadDirections = next;
-  for (const arm of dpad.querySelectorAll('.arm')) arm.classList.toggle('on', next.has(arm.dataset.dir));
+function setStickDirections(next) {
+  for (const name of stickDirections) if (!next.has(name)) releaseKey(DIRECTION_KEYS[name]);
+  for (const name of next) if (!stickDirections.has(name)) pressKey(DIRECTION_KEYS[name]);
+  if (next.size > stickDirections.size) buzz();
+  stickDirections = next;
 }
 
-dpad.addEventListener('pointerdown', (event) => {
-  if (!running || dpadPointer !== null) return;
+// ハートを枠の中で動かす。dx, dy は枠の真ん中からのずれ（画面上の px）
+function moveHeart(dx, dy) {
+  // PC の枠は縮めて表示しているので、画面上の px を枠の中の px に直す
+  const scale = stickBox.getBoundingClientRect().width / stickBox.offsetWidth || 1;
+  const limit = (stickBox.clientWidth - stickHeart.getBoundingClientRect().width / scale) / 2 - 2;
+  const clamp = (v) => (limit > 0 ? Math.max(-limit, Math.min(limit, v / scale)) : 0);
+  stickBox.style.setProperty('--hx', `${clamp(dx)}px`);
+  stickBox.style.setProperty('--hy', `${clamp(dy)}px`);
+}
+
+// キーボードの矢印キーで動かしたときは、押している向きの枠の端までハートを寄せる
+function showHeartToward(directions) {
+  const x = (directions.has('right') ? 1 : 0) - (directions.has('left') ? 1 : 0);
+  const y = (directions.has('down') ? 1 : 0) - (directions.has('up') ? 1 : 0);
+  moveHeart(x * 1000, y * 1000);
+}
+
+function updateStick(event) {
+  const rect = stickBox.getBoundingClientRect();
+  const dx = event.clientX - (rect.left + rect.width / 2);
+  const dy = event.clientY - (rect.top + rect.height / 2);
+  moveHeart(dx, dy);
+  setStickDirections(directionsFor(dx, dy, (rect.width / 2) * DEAD_ZONE));
+}
+
+stick.addEventListener('pointerdown', (event) => {
+  if (!running || stickPointer !== null) return;
   event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
-  dpadPointer = event.pointerId;
-  capturePointer(dpad, event);
-  setDpadDirections(directionsAt(event));
+  stickPointer = event.pointerId;
+  capturePointer(stick, event);
+  stick.classList.add('active');
+  updateStick(event);
 });
-dpad.addEventListener('pointermove', (event) => {
-  if (event.pointerId === dpadPointer) setDpadDirections(directionsAt(event));
+stick.addEventListener('pointermove', (event) => {
+  if (event.pointerId === stickPointer) updateStick(event);
 });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-  dpad.addEventListener(type, (event) => {
-    if (event.pointerId !== dpadPointer) return;
-    dpadPointer = null;
-    setDpadDirections(new Set());
+  stick.addEventListener(type, (event) => {
+    if (event.pointerId !== stickPointer) return;
+    stickPointer = null;
+    stick.classList.remove('active');
+    setStickDirections(new Set());
+    moveHeart(0, 0);
     unlockAudio();
   });
 }
@@ -652,8 +683,12 @@ for (const button of document.querySelectorAll('.pad-btn')) {
 
 // 見た目と「押している指」の記録だけを消す（キーを離す処理は releaseAllKeys が行う）
 function resetTouchControls() {
-  dpadPointer = null;
-  dpadDirections = new Set();
+  stickPointer = null;
+  stickDirections = new Set();
+  keyboardDirections.clear();
+  stick.classList.remove('active');
+  stickBox.style.setProperty('--hx', '0px');
+  stickBox.style.setProperty('--hy', '0px');
   buttonPointers.clear();
   document.querySelectorAll('.controls .on').forEach((el) => el.classList.remove('on'));
 }

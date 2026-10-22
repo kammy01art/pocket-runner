@@ -5,14 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- 検索結果に出さない（URL を知っている人だけが使う想定） -->
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#000000">
   <title>Pocket Runner（試作）</title>
+  <!-- ドット文字のフォント（DotGothic16 / SIL Open Font License） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
 <body>
+  <!-- ドットのハート。ほかの場所からは <use href="#heart"> で使う -->
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+    <symbol id="heart" viewBox="0 0 7 6">
+      <path d="M1 0h2v1H1zM4 0h2v1H4zM0 1h7v2H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z" fill="currentColor" shape-rendering="crispEdges"/>
+    </symbol>
+  </svg>
+
   <main id="menu" class="menu">
     <header>
-      <h1>Pocket Runner <span class="tag">試作</span></h1>
+      <h1><svg class="heart" aria-hidden="true"><use href="#heart"/></svg>Pocket Runner <span class="tag">試作</span></h1>
       <p class="lead">自分の持っているGameMakerのゲームを、ブラウザの中で動かします。ゲームのデータはこのブラウザの中にだけ保存され、どこにも送信されません。</p>
     </header>
 
@@ -58,47 +70,64 @@
     <div class="player-toolbar">
       <span id="player-status" class="player-status"></span>
       <div class="view-switch" role="group" aria-label="表示">
-        <button type="button" data-view="portrait">縦持ち</button>
         <button type="button" data-view="landscape">横持ち</button>
+        <button type="button" data-view="portrait">縦持ち</button>
         <button type="button" data-view="plain">画面だけ</button>
       </div>
       <button id="quit" class="button small" type="button">終了</button>
     </div>
 
     <div class="device-area">
-      <!-- スマホでは画面いっぱい。PC の「縦持ち」「横持ち」では iPhone 15 Pro の大きさの枠になる -->
+      <!-- スマホでは画面いっぱい。PC の「横持ち」「縦持ち」では iPhone 15 Pro の大きさの枠になる -->
       <div class="device">
         <div class="device-status" aria-hidden="true"><span>9:41</span><i class="island"></i></div>
         <div class="screen">
+          <!-- ゲーム画面と、そのまわりの枠（ゲームボーイの画面まわり） -->
           <div class="stage">
-            <canvas id="canvas" tabindex="0"></canvas>
+            <div class="bezel">
+              <div class="glass">
+                <canvas id="canvas" tabindex="0"></canvas>
+              </div>
+              <p class="bezel-label" aria-hidden="true">
+                <svg class="power-led"><use href="#heart"/></svg>
+                <span>POCKET RUNNER</span>
+              </p>
+            </div>
           </div>
 
-          <!-- タッチ操作。縦持ちは画面の下、横持ちは画面の左右に並ぶ -->
+          <!-- タッチ操作。横持ちは画面の左右、縦持ちは画面の下に並ぶ -->
           <div class="controls">
             <button id="open-menu" class="app-menu" type="button" aria-label="メニュー">
-              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"/></svg>
             </button>
-            <button class="pad-btn pill" type="button" data-key="67"><span>C</span></button>
-            <div id="dpad" class="dpad">
-              <div class="dpad-cross">
-                <span class="arm up" data-dir="up"></span>
-                <span class="arm right" data-dir="right"></span>
-                <span class="arm down" data-dir="down"></span>
-                <span class="arm left" data-dir="left"></span>
+            <button class="pad-btn pill" type="button" data-key="67" aria-label="メニュー（C）">
+              <span><b>C</b><small>メニュー</small></span>
+            </button>
+
+            <!-- 移動。白い枠の中で赤いハートが動く。左側のどこに触れても操作できる -->
+            <div id="stick" class="stick" role="group" aria-label="移動">
+              <div class="stick-box">
+                <svg class="stick-heart" aria-hidden="true"><use href="#heart"/></svg>
               </div>
             </div>
+
             <div class="face">
-              <button class="pad-btn round" type="button" data-key="88"><span>X</span></button>
-              <button class="pad-btn round primary" type="button" data-key="90"><span>Z</span></button>
+              <button class="pad-btn round" type="button" data-key="88" aria-label="もどる（X）">
+                <span><b>X</b><small>もどる</small></span>
+              </button>
+              <button class="pad-btn round primary" type="button" data-key="90" aria-label="けってい（Z）">
+                <span><b>Z</b><small>けってい</small></span>
+              </button>
             </div>
+
+            <div class="speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
           </div>
 
           <div id="game-menu" class="sheet" hidden>
             <div class="sheet-panel">
               <p id="game-menu-title" class="sheet-title"></p>
-              <button id="resume" class="button" type="button">ゲームに戻る</button>
-              <button id="quit-from-menu" class="button danger" type="button">終了する</button>
+              <button id="resume" class="sheet-option" type="button">ゲームにもどる</button>
+              <button id="quit-from-menu" class="sheet-option" type="button">しゅうりょうする</button>
             </div>
           </div>
         </div>

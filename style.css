@@ -1,15 +1,31 @@
+/* Pocket Runner の見た目
+   テーマは「黒いゲームボーイ × アンダーテイルの画面」。
+   - 黒い本体と、四角い白い枠（アンダーテイルの会話や戦闘の枠）
+   - オレンジの枠のボタン（戦闘のコマンドボタン）。押すと黄色（選んだときの色）
+   - 移動は、白い枠の中で動く赤いハート
+   ゲームの画像や文字は使わず、色と形だけで雰囲気を出している。 */
+
 :root {
   color-scheme: dark;
-  --bg: #121214;
-  --surface: #1c1c20;
-  --line: #2e2e34;
-  --text: #ececf0;
-  --muted: #9a9aa4;
-  --accent: #f2c14e;
-  --accent-text: #1a1406;
-  --ok: #6fcf97;
-  --ng: #f2786d;
-  --radius: 10px;
+
+  --ut-black: #000;
+  --ut-white: #fff;
+  --ut-yellow: #ffff00;
+  --ut-orange: #ff9a1f;
+  --ut-orange-deep: #4a2600;
+  --ut-red: #ff0000;
+  --ut-gray: #8c8c94;
+
+  --gb-body: #0c0c0e;
+  --gb-bezel: #1b1b1f;
+
+  --bg: #000;
+  --line: #3a3a40;
+  --text: #fff;
+  --muted: #a6a6ae;
+  --ng: #ff5a5a;
+
+  --font-pixel: "DotGothic16", ui-monospace, "MS Gothic", monospace;
 }
 
 * { box-sizing: border-box; }
@@ -19,93 +35,107 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.6 system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  font: 15px/1.7 system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif;
 }
 
-/* ===== メニュー ===== */
+.heart { color: var(--ut-red); }
+
+/* ===== トップ（ゲームを選ぶ画面） ===== */
 
 .menu {
   max-width: 720px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 40px 20px 64px;
 }
 
-h1 { font-size: 24px; margin: 0 0 8px; }
-h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  font: 400 30px/1.2 var(--font-pixel);
+  letter-spacing: .04em;
+}
+h1 .heart { width: 24px; height: 21px; }
+h2 { margin: 0 0 14px; font: 400 17px/1.4 var(--font-pixel); }
 
 .tag {
-  font-size: 12px;
-  vertical-align: middle;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--line);
+  padding: 4px 8px;
+  border: 2px solid var(--ut-gray);
   color: var(--muted);
+  font: 400 12px/1 var(--font-pixel);
+  letter-spacing: 0;
 }
 
 .lead { margin: 0; color: var(--muted); }
-.hint { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
 
+/* アンダーテイルの会話の枠のような、黒地に白い四角の枠 */
 section {
   margin-top: 24px;
   padding: 20px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--ut-black);
+  border: 3px solid var(--ut-white);
 }
 
-.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
 
+/* 戦闘のコマンドボタンのような、オレンジの枠のボタン */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-text);
-  font: inherit;
-  font-weight: 600;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 3px solid var(--ut-orange);
+  background: var(--ut-black);
+  color: var(--ut-orange);
+  font: 400 16px/1 var(--font-pixel);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.button:disabled { opacity: .5; cursor: default; }
-.button.secondary { background: var(--line); color: var(--text); }
-.button.danger { background: transparent; color: var(--ng); box-shadow: inset 0 0 0 1px var(--line); }
-.button.small { min-height: 32px; padding: 0 12px; font-size: 13px; }
+.button:hover,
+.button:focus-visible { border-color: var(--ut-yellow); color: var(--ut-yellow); outline: none; }
+.button:active { background: var(--ut-yellow); color: var(--ut-black); }
+.button:disabled,
+label.button:has(input:disabled) { opacity: .45; cursor: default; }
+.button.secondary { border-color: var(--ut-gray); color: #dcdce2; }
+.button.danger { border-color: #8a2b2b; color: var(--ng); }
+.button.small { min-height: 34px; padding: 0 12px; border-width: 2px; font-size: 14px; }
 
-.env { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.env li { display: flex; gap: 8px; align-items: baseline; }
-.env .mark { width: 1.2em; font-weight: 700; }
-.env .ok .mark { color: var(--ok); }
+.env { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.env li { display: flex; align-items: baseline; gap: 10px; }
+.env .mark { width: 1.2em; font-family: var(--font-pixel); }
+.env .ok .mark { color: var(--ut-yellow); }
 .env .ng .mark { color: var(--ng); }
 .env .note { color: var(--muted); font-size: 13px; }
 
+/* 取り込みの進み具合は、アンダーテイルの HP バー（赤の上に黄色）で見せる */
 .progress { margin-top: 16px; }
-.bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
-.bar > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+.bar { height: 14px; background: #c40000; }
+.bar > div { width: 0; height: 100%; background: var(--ut-yellow); transition: width .1s; }
 .progress .hint { margin-top: 8px; }
 
-.games { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.games { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .games li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 2px solid var(--line);
 }
-.games .name { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
+.games .name { flex: 1; font: 400 18px/1.3 var(--font-pixel); overflow-wrap: anywhere; }
 
 .log { margin-top: 24px; }
-.log summary { cursor: pointer; color: var(--muted); }
+.log summary { color: var(--muted); font-family: var(--font-pixel); cursor: pointer; }
 .log pre {
   max-height: 320px;
   overflow: auto;
   margin: 8px 0 0;
   padding: 12px;
-  background: #000;
-  border-radius: 8px;
+  background: #0b0b0d;
+  border: 2px solid var(--line);
   font-size: 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -119,7 +149,7 @@ section {
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #000;
+  background: var(--ut-black);
 }
 
 /* PC だけに出る道具バー */
@@ -129,33 +159,25 @@ section {
   align-items: center;
   gap: 8px 12px;
   padding: 10px 16px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  background: #0b0b0d;
+  border-bottom: 2px solid var(--line);
   color: var(--muted);
-  font-size: 13px;
+  font: 400 14px/1.4 var(--font-pixel);
 }
 .player.touch-device .player-toolbar { display: none; }
 .player-status { flex: 1; min-width: 8em; }
 
-.view-switch {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
+.view-switch { display: flex; gap: 2px; padding: 2px; border: 2px solid var(--line); background: var(--ut-black); }
 .view-switch button {
   min-height: 28px;
   padding: 0 12px;
   border: 0;
-  border-radius: 6px;
   background: none;
   color: var(--muted);
-  font: inherit;
+  font: 400 14px/1 var(--font-pixel);
   cursor: pointer;
 }
-.view-switch button[aria-pressed="true"] { background: var(--line); color: var(--text); }
+.view-switch button[aria-pressed="true"] { background: var(--ut-white); color: var(--ut-black); }
 
 /* 端末の枠を置く場所 */
 .device-area {
@@ -165,10 +187,14 @@ section {
   align-items: center;
   justify-content: center;
 }
-.player.framed .device-area { padding: 32px; overflow: hidden; background: var(--bg); }
+.player.framed .device-area {
+  padding: 32px;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, #1c1c21, #050506 72%);
+}
 
 /* 端末。スマホでは画面いっぱい。
-   PC の縦持ち・横持ちでは iPhone 15 Pro の実寸（393×852）で組み、画面に収まるように全体を縮める。
+   PC の横持ち・縦持ちでは iPhone 15 Pro の実寸（393×852）で組み、画面に収まるように全体を縮める。
    ボタンや文字も同じ割合で小さくなるので、スマホと同じ比率で見られる（縮める割合は app.js が計算する） */
 .device {
   container: device / size;
@@ -176,14 +202,14 @@ section {
   flex: none;
   width: 100%;
   height: 100%;
-  background: #000;
+  background: var(--gb-body);
 }
 .player.framed .device {
   width: 393px;
   height: 852px;
-  border-radius: 54px;
   overflow: hidden;
-  box-shadow: 0 0 0 10px #1b1b20, 0 0 0 11px #3a3a42;
+  border-radius: 54px;
+  box-shadow: 0 0 0 10px #1b1b20, 0 0 0 11px #3a3a42, 0 30px 80px rgb(0 0 0 / .6);
   transform: scale(var(--device-scale, 1));
 }
 .player.framed[data-view="landscape"] .device { width: 852px; height: 393px; }
@@ -196,7 +222,8 @@ section {
   align-items: center;
   height: 54px;
   padding-left: 48px;
-  color: #fff;
+  background: var(--ut-black);
+  color: var(--ut-white);
   font: 600 16px/1 system-ui, sans-serif;
 }
 .island {
@@ -215,6 +242,7 @@ section {
   position: absolute;
   bottom: 8px;
   left: 50%;
+  z-index: 3;
   display: block;
   width: 134px;
   height: 5px;
@@ -234,16 +262,23 @@ section {
   inset: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: var(--ut-black);
 }
 /* PC の枠では、ホーム画面に追加したアプリの余白を再現する */
 .player.framed .screen { --safe-top: 0px; --safe-right: 0px; --safe-bottom: 34px; --safe-left: 0px; }
 .player.framed[data-view="portrait"] .screen { top: 54px; }
 .player.framed[data-view="landscape"] .screen { --safe-right: 59px; --safe-bottom: 21px; --safe-left: 59px; }
 
+/* 「画面だけ」ではゲーム画面だけを出す（画面まわりの枠は消す） */
 .stage { flex: 1; min-height: 0; display: flex; }
+.bezel,
+.glass { display: contents; }
+.bezel-label { display: none; }
 
 #canvas {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -253,23 +288,10 @@ section {
 
 .controls { display: none; }
 
-/* ===== タッチ操作 ===== */
-/* 大きさや配置は、画面全体ではなく端末（.device）の大きさを基準にする。
-   そうすると、PC の枠の中でもスマホと同じ見え方になる（cqmin などは .device に対する割合） */
+/* ===== タッチ操作の画面 =====
+   大きさや配置は、画面全体ではなく端末（.device）の大きさを基準にする（cqmin などは .device に対する割合）。
+   そうすると、PC の枠の中でもスマホと同じ見え方になる。 */
 
-.player.touch .screen {
-  --pad: #26262c;
-  --pad-line: #3a3a42;
-  --pad-ink: #b8b8c2;
-  --dpad-size: clamp(116px, 34cqmin, 172px);
-  --btn: clamp(52px, 16cqmin, 76px);
-  /* 当たり判定は見た目より広くする（片側ぶん） */
-  --hit: 10px;
-
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "stage" "controls";
-}
 .player.touch {
   touch-action: none;
   overscroll-behavior: none;
@@ -278,22 +300,80 @@ section {
   -webkit-touch-callout: none;
 }
 
-.player.touch .stage {
-  grid-area: stage;
-  width: 100%;
-  aspect-ratio: var(--game-aspect, 4 / 3);
-  max-height: 60cqh;
+.player.touch .screen {
+  /* 当たり判定は見た目より広くする（片側ぶん） */
+  --hit: 10px;
+  --bezel-pad: 12px;
+  --label-h: 30px;
+  --stick-size: clamp(132px, 36cqmin, 172px);
+  --heart: clamp(24px, 6.5cqmin, 32px);
+  --btn-z: clamp(90px, 27.5cqmin, 120px);
+  --btn-x: clamp(64px, 19cqmin, 88px);
+
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "stage" "controls";
+  background: var(--gb-body);
 }
 
-/* 縦持ち（A）: ゲーム画面の下に操作をまとめる */
+/* --- ゲーム画面のまわり（ゲームボーイの画面まわり） --- */
+
+.player.touch .stage { grid-area: stage; display: block; padding: 12px 14px 0; }
+
+.player.touch .bezel {
+  display: flex;
+  flex-direction: column;
+  padding: var(--bezel-pad) var(--bezel-pad) 0;
+  background: var(--gb-bezel);
+  /* ゲームボーイの画面まわりは、右下の角だけ大きく丸い */
+  border-radius: 10px 10px 40px 10px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), inset 0 -2px 0 rgb(0 0 0 / .5);
+}
+
+.player.touch .glass {
+  display: flex;
+  aspect-ratio: var(--game-aspect, 4 / 3);
+  max-height: 46cqh;
+  background: var(--ut-black);
+  box-shadow: 0 0 0 2px var(--ut-black), 0 0 0 3px #2c2c32;
+}
+
+.player.touch .bezel-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--label-h);
+  margin: 0;
+  padding-left: 2px;
+  color: #c9c9d1;
+  font: 400 13px/1 var(--font-pixel);
+  letter-spacing: .14em;
+}
+
+/* 電源ランプの代わりの、ゆっくり光る赤いハート */
+.power-led {
+  width: 12px;
+  height: 11px;
+  color: var(--ut-red);
+  filter: drop-shadow(0 0 4px rgb(255 0 0 / .7));
+  animation: beat 1.6s ease-in-out infinite;
+}
+@keyframes beat {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+/* --- 操作部分。縦持ちは画面の下にまとめる --- */
+
 .player.touch .controls {
   grid-area: controls;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto minmax(0, 1fr);
-  grid-template-areas: "menu sys" "dpad face";
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "menu sys" "stick face" "stick speaker";
   align-items: center;
-  padding: 8px 12px 16px;
+  column-gap: 8px;
+  padding: 10px 14px 6px;
 }
 
 .app-menu {
@@ -304,139 +384,224 @@ section {
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--pad-ink);
+  margin: 3px 0;
+  border: 2px solid #55555c;
+  background: var(--ut-black);
+  color: #c9c9d1;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+.app-menu:active { border-color: var(--ut-yellow); color: var(--ut-yellow); }
+
+/* 移動: アンダーテイルの戦闘の枠の中で、赤いハートが動く。
+   左側のどこに触れても、枠の真ん中からの向きで動かせる（.stick 全体が触れる範囲） */
+.stick {
+  grid-area: stick;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  cursor: grab;
+}
+.stick.active { cursor: grabbing; }
+.stick-box {
+  position: relative;
+  width: var(--stick-size);
+  height: var(--stick-size);
+  background: var(--ut-black);
+  border: 3px solid var(--ut-white);
+}
+.stick-heart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--heart);
+  height: calc(var(--heart) * 6 / 7);
+  margin: calc(var(--heart) * -3 / 7) 0 0 calc(var(--heart) / -2);
+  color: var(--ut-red);
+  transform: translate(var(--hx, 0px), var(--hy, 0px));
+  transition: transform .12s ease-out;
+}
+.stick.active .stick-heart { transition: none; }
+
+/* 決定（Z）・もどる（X）。戦闘のコマンドボタンのようなオレンジの枠で、押すと黄色。
+   いちばんよく押す Z は大きく右上に、X は左下に斜めに並べる */
+.face {
+  grid-area: face;
+  position: relative;
+  /* Z と X の離し方（X の大きさに対する割合）。押し間違えないよう、すき間を 15px ほど空ける */
+  width: calc(var(--btn-z) + var(--btn-x) * var(--face-x, .7) + var(--hit) * 2);
+  height: calc(var(--btn-z) + var(--btn-x) * var(--face-y, .9) + var(--hit) * 2);
+}
+.face .pad-btn { position: absolute; }
+.face [data-key="90"] { top: 0; right: 0; }
+.face [data-key="88"] { bottom: 0; left: 0; }
 
 .pad-btn {
   padding: var(--hit);
   border: 0;
   background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
 .pad-btn span {
-  display: grid;
-  place-items: center;
-  width: var(--btn);
-  height: var(--btn);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: var(--btn-x);
+  height: var(--btn-x);
+  border: 3px solid var(--ut-orange);
   border-radius: 50%;
-  background: var(--pad);
-  box-shadow: inset 0 0 0 1px var(--pad-line);
-  color: var(--pad-ink);
-  font: 600 22px/1 system-ui, sans-serif;
+  background: var(--ut-black);
+  color: var(--ut-orange);
+  /* 押せそうに見える厚み */
+  box-shadow: 0 4px 0 var(--ut-orange-deep);
+  transition: transform .05s;
 }
-.pad-btn.primary span { color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.pad-btn.on span { background: var(--accent); color: var(--accent-text); box-shadow: none; }
+.pad-btn b { font: 400 calc(var(--btn-x) * .36)/1 var(--font-pixel); }
+.pad-btn small { font: 400 11px/1 var(--font-pixel); }
+.pad-btn.primary span { width: var(--btn-z); height: var(--btn-z); border-width: 4px; }
+.pad-btn.primary b { font-size: calc(var(--btn-z) * .36); }
+.pad-btn.primary small { font-size: 13px; }
+.pad-btn.on span {
+  border-color: var(--ut-yellow);
+  background: var(--ut-yellow);
+  color: var(--ut-black);
+  box-shadow: 0 1px 0 #3d3d00;
+  transform: translateY(3px);
+}
 
+/* メニュー（C）は四角いボタンにして、Z・X と区別する */
 .pad-btn.pill {
   grid-area: sys;
   justify-self: end;
   align-self: start;
+  padding: 6px var(--hit);
 }
 .pad-btn.pill span {
+  flex-direction: row;
+  gap: 8px;
   width: auto;
-  height: 32px;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-size: 15px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 0;
+  box-shadow: 0 3px 0 var(--ut-orange-deep);
 }
+.pad-btn.pill b { font-size: 18px; }
+.pad-btn.pill small { font-size: 13px; }
 
-.dpad {
-  grid-area: dpad;
-  justify-self: start;
-  padding: var(--hit);
-  touch-action: none;
-}
-.dpad-cross {
-  position: relative;
-  width: var(--dpad-size);
-  height: var(--dpad-size);
-}
-.dpad-cross::after,
-.arm {
-  position: absolute;
-  width: 34%;
-  height: 34%;
-  background: var(--pad);
-}
-.dpad-cross::after { content: ""; left: 33%; top: 33%; }
-.arm { --ink: var(--pad-ink); }
-.arm.up { left: 33%; top: 0; border-radius: 8px 8px 0 0; }
-.arm.down { left: 33%; bottom: 0; border-radius: 0 0 8px 8px; }
-.arm.left { left: 0; top: 33%; border-radius: 8px 0 0 8px; }
-.arm.right { right: 0; top: 33%; border-radius: 0 8px 8px 0; }
-.arm.on { background: var(--accent); --ink: var(--accent-text); }
-.arm::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 0;
-  height: 0;
-  border: 7px solid transparent;
-}
-.arm.up::before { border-top-width: 0; border-bottom-color: var(--ink); }
-.arm.down::before { border-bottom-width: 0; border-top-color: var(--ink); }
-.arm.left::before { border-left-width: 0; border-right-color: var(--ink); }
-.arm.right::before { border-right-width: 0; border-left-color: var(--ink); }
-
-/* Z を右上、X を左下に斜めに並べる */
-.face {
-  grid-area: face;
+/* ゲームボーイのスピーカーの穴（飾り） */
+.speaker {
+  grid-area: speaker;
   justify-self: end;
-  position: relative;
-  width: calc((var(--btn) + var(--hit) * 2) * 2);
-  height: calc((var(--btn) + var(--hit) * 2) * 1.45);
+  display: flex;
+  gap: 7px;
+  padding: 4px 10px 8px;
+  transform: rotate(-28deg);
+  pointer-events: none;
 }
-.face .pad-btn { position: absolute; }
-.face [data-key="90"] { right: 0; top: 0; }
-.face [data-key="88"] { left: 0; bottom: 0; }
+.speaker i {
+  width: 6px;
+  height: 40px;
+  border-radius: 3px;
+  background: #050506;
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / .8), 0 1px 0 rgb(255 255 255 / .05);
+}
 
-/* 横持ち（B）: ゲーム画面を真ん中に、操作を左右に分ける */
+/* --- 横持ち: ゲーム画面を真ん中に、操作を左右に分ける --- */
 @container device (orientation: landscape) {
   .player.touch .screen {
-    --dpad-size: clamp(96px, 28cqmin, 156px);
-    --btn: clamp(44px, 13cqmin, 68px);
+    /* 左右の操作に使う幅。ボタンを大きくするため、ゲーム画面より操作を優先する */
+    --side: 176px;
+    --stick-size: clamp(116px, 36cqmin, 150px);
+    --heart: clamp(22px, 6cqmin, 30px);
+    --btn-z: clamp(84px, 26cqmin, 104px);
+    --btn-x: clamp(60px, 18cqmin, 76px);
+    /* 横持ちは左右の幅が限られるので、X を Z の下寄りに置いて縦に離す */
+    --face-x: .45;
+    --face-y: 1.08;
 
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "menu stage sys" "dpad stage face";
+    grid-template-areas: "menu stage sys" "stick stage face";
   }
   .player.touch .controls { display: contents; }
   .player.touch .stage {
-    width: auto;
+    align-self: center;
     height: calc(100cqh - var(--safe-top) - var(--safe-bottom));
-    max-height: none;
-    /* 左右に操作を置く幅を最低限残す */
-    max-width: calc(100cqw - 2 * 144px - var(--safe-left) - var(--safe-right));
+    /* 画面まわりの枠の中で、ゲーム画面がちょうど収まる幅（左右に操作を置く幅は残す） */
+    width: calc((100cqh - var(--safe-top) - var(--safe-bottom) - 16px - var(--bezel-pad) - var(--label-h)) * (var(--game-aspect, 4 / 3)) + 2 * var(--bezel-pad));
+    max-width: calc(100cqw - 2 * var(--side) - var(--safe-left) - var(--safe-right));
+    padding: 8px 0;
   }
-  .app-menu { margin: 8px; }
+  .player.touch .bezel { height: 100%; }
+  .player.touch .glass { flex: 1; min-height: 0; aspect-ratio: auto; max-height: none; }
+  .app-menu { margin: 10px; }
   .pad-btn.pill { margin: 4px; }
-  .dpad,
   .face { justify-self: center; align-self: center; }
+  .speaker { display: none; }
 }
 
-/* ===== ゲーム中のメニュー ===== */
+/* ===== ゲーム中のメニュー（アンダーテイルの会話の枠） ===== */
 
 .sheet {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgb(0 0 0 / .6);
+  background: rgb(0 0 0 / .7);
 }
 .sheet-panel {
   display: grid;
-  gap: 8px;
-  width: min(320px, 100%);
-  padding: 20px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  gap: 4px;
+  width: min(340px, 100%);
+  padding: 18px 22px;
+  background: var(--ut-black);
+  border: 4px solid var(--ut-white);
 }
-.sheet-title { margin: 0 0 8px; font-weight: 600; text-align: center; }
+.sheet-title { margin: 0 0 10px; color: var(--muted); font: 400 16px/1.3 var(--font-pixel); }
+.sheet-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 0 0 34px;
+  border: 0;
+  background: none;
+  color: var(--ut-white);
+  font: 400 21px/1 var(--font-pixel);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 選んでいる項目には、ハートのカーソルを出して黄色にする */
+.sheet-option::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  width: 18px;
+  height: 16px;
+  background: var(--ut-red);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6'%3E%3Cpath d='M1 0h2v1H1zM4 0h2v1H4zM0 1h7v2H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 6'%3E%3Cpath d='M1 0h2v1H1zM4 0h2v1H4zM0 1h7v2H0zM1 3h5v1H1zM2 4h3v1H2zM3 5h1v1H3z'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0;
+}
+.sheet-option:hover,
+.sheet-option:focus-visible,
+.sheet-option:active { color: var(--ut-yellow); outline: none; }
+.sheet-option:hover::before,
+.sheet-option:focus-visible::before,
+.sheet-option:active::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .power-led { animation: none; }
+  .stick-heart,
+  .pad-btn span { transition: none; }
+}
