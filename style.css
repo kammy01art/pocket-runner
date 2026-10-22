@@ -120,8 +120,126 @@ section {
   display: flex;
   flex-direction: column;
   background: #000;
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
+
+/* PC だけに出る道具バー */
+.player-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+.player.touch-device .player-toolbar { display: none; }
+.player-status { flex: 1; min-width: 8em; }
+
+.view-switch {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.view-switch button {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.view-switch button[aria-pressed="true"] { background: var(--line); color: var(--text); }
+
+/* 端末の枠を置く場所 */
+.device-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.player.framed .device-area { padding: 32px; overflow: hidden; background: var(--bg); }
+
+/* 端末。スマホでは画面いっぱい。
+   PC の縦持ち・横持ちでは iPhone 15 Pro の実寸（393×852）で組み、画面に収まるように全体を縮める。
+   ボタンや文字も同じ割合で小さくなるので、スマホと同じ比率で見られる（縮める割合は app.js が計算する） */
+.device {
+  container: device / size;
+  position: relative;
+  flex: none;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+.player.framed .device {
+  width: 393px;
+  height: 852px;
+  border-radius: 54px;
+  overflow: hidden;
+  box-shadow: 0 0 0 10px #1b1b20, 0 0 0 11px #3a3a42;
+  transform: scale(var(--device-scale, 1));
+}
+.player.framed[data-view="landscape"] .device { width: 852px; height: 393px; }
+
+/* 縦持ちの枠の上端（時計とダイナミックアイランド）。ホーム画面に追加したアプリは、この下から始まる */
+.device-status { display: none; }
+.player.framed[data-view="portrait"] .device-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 54px;
+  padding-left: 48px;
+  color: #fff;
+  font: 600 16px/1 system-ui, sans-serif;
+}
+.island {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  width: 124px;
+  height: 36px;
+  margin-left: -62px;
+  border-radius: 18px;
+  background: #16161a;
+}
+
+.home-indicator { display: none; }
+.player.framed .home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  display: block;
+  width: 134px;
+  height: 5px;
+  margin-left: -67px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / .7);
+  pointer-events: none;
+}
+
+/* アプリの表示範囲。iPhone の切り欠きやホームバーを避ける余白（safe area）を内側に取る */
+.screen {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
+/* PC の枠では、ホーム画面に追加したアプリの余白を再現する */
+.player.framed .screen { --safe-top: 0px; --safe-right: 0px; --safe-bottom: 34px; --safe-left: 0px; }
+.player.framed[data-view="portrait"] .screen { top: 54px; }
+.player.framed[data-view="landscape"] .screen { --safe-right: 59px; --safe-bottom: 21px; --safe-left: 59px; }
 
 .stage { flex: 1; min-height: 0; display: flex; }
 
@@ -133,45 +251,38 @@ section {
   outline: none;
 }
 
-.player-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  color: var(--muted);
-  font-size: 13px;
-}
-.player-bar span { flex: 1; }
-
 .controls { display: none; }
 
 /* ===== タッチ操作 ===== */
+/* 大きさや配置は、画面全体ではなく端末（.device）の大きさを基準にする。
+   そうすると、PC の枠の中でもスマホと同じ見え方になる（cqmin などは .device に対する割合） */
 
-.player.touch {
+.player.touch .screen {
   --pad: #26262c;
   --pad-line: #3a3a42;
   --pad-ink: #b8b8c2;
-  --dpad-size: clamp(116px, 34vmin, 172px);
-  --btn: clamp(52px, 16vmin, 76px);
+  --dpad-size: clamp(116px, 34cqmin, 172px);
+  --btn: clamp(52px, 16cqmin, 76px);
   /* 当たり判定は見た目より広くする（片側ぶん） */
   --hit: 10px;
 
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   grid-template-areas: "stage" "controls";
+}
+.player.touch {
   touch-action: none;
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
 }
-.player.touch .player-bar { display: none; }
 
 .player.touch .stage {
   grid-area: stage;
   width: 100%;
   aspect-ratio: var(--game-aspect, 4 / 3);
-  max-height: 60dvh;
+  max-height: 60cqh;
 }
 
 /* 縦持ち（A）: ゲーム画面の下に操作をまとめる */
@@ -286,10 +397,10 @@ section {
 .face [data-key="88"] { left: 0; bottom: 0; }
 
 /* 横持ち（B）: ゲーム画面を真ん中に、操作を左右に分ける */
-@media (orientation: landscape) {
-  .player.touch {
-    --dpad-size: clamp(100px, 30vmin, 160px);
-    --btn: clamp(46px, 14vmin, 72px);
+@container device (orientation: landscape) {
+  .player.touch .screen {
+    --dpad-size: clamp(96px, 28cqmin, 156px);
+    --btn: clamp(44px, 13cqmin, 68px);
 
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
@@ -298,10 +409,10 @@ section {
   .player.touch .controls { display: contents; }
   .player.touch .stage {
     width: auto;
-    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    height: calc(100cqh - var(--safe-top) - var(--safe-bottom));
     max-height: none;
     /* 左右に操作を置く幅を最低限残す */
-    max-width: calc(100vw - 2 * 136px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    max-width: calc(100cqw - 2 * 144px - var(--safe-left) - var(--safe-right));
   }
   .app-menu { margin: 8px; }
   .pad-btn.pill { margin: 4px; }

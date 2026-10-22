@@ -54,41 +54,55 @@
   </main>
 
   <div id="player" class="player" hidden>
-    <div class="stage">
-      <canvas id="canvas" tabindex="0"></canvas>
-    </div>
-
-    <!-- キーボードで遊ぶとき（PC）の下部バー -->
-    <div class="player-bar">
-      <span id="player-status"></span>
+    <!-- PC だけに出る道具バー。スマホでの見え方を PC で確かめられる -->
+    <div class="player-toolbar">
+      <span id="player-status" class="player-status"></span>
+      <div class="view-switch" role="group" aria-label="表示">
+        <button type="button" data-view="portrait">縦持ち</button>
+        <button type="button" data-view="landscape">横持ち</button>
+        <button type="button" data-view="plain">画面だけ</button>
+      </div>
       <button id="quit" class="button small" type="button">終了</button>
     </div>
 
-    <!-- タッチ操作。縦持ちは画面の下、横持ちは画面の左右に並ぶ -->
-    <div class="controls">
-      <button id="open-menu" class="app-menu" type="button" aria-label="メニュー">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-      <button class="pad-btn pill" type="button" data-key="67"><span>C</span></button>
-      <div id="dpad" class="dpad">
-        <div class="dpad-cross">
-          <span class="arm up" data-dir="up"></span>
-          <span class="arm right" data-dir="right"></span>
-          <span class="arm down" data-dir="down"></span>
-          <span class="arm left" data-dir="left"></span>
-        </div>
-      </div>
-      <div class="face">
-        <button class="pad-btn round" type="button" data-key="88"><span>X</span></button>
-        <button class="pad-btn round primary" type="button" data-key="90"><span>Z</span></button>
-      </div>
-    </div>
+    <div class="device-area">
+      <!-- スマホでは画面いっぱい。PC の「縦持ち」「横持ち」では iPhone 15 Pro の大きさの枠になる -->
+      <div class="device">
+        <div class="device-status" aria-hidden="true"><span>9:41</span><i class="island"></i></div>
+        <div class="screen">
+          <div class="stage">
+            <canvas id="canvas" tabindex="0"></canvas>
+          </div>
 
-    <div id="game-menu" class="sheet" hidden>
-      <div class="sheet-panel">
-        <p id="game-menu-title" class="sheet-title"></p>
-        <button id="resume" class="button" type="button">ゲームに戻る</button>
-        <button id="quit-from-menu" class="button danger" type="button">終了する</button>
+          <!-- タッチ操作。縦持ちは画面の下、横持ちは画面の左右に並ぶ -->
+          <div class="controls">
+            <button id="open-menu" class="app-menu" type="button" aria-label="メニュー">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="pad-btn pill" type="button" data-key="67"><span>C</span></button>
+            <div id="dpad" class="dpad">
+              <div class="dpad-cross">
+                <span class="arm up" data-dir="up"></span>
+                <span class="arm right" data-dir="right"></span>
+                <span class="arm down" data-dir="down"></span>
+                <span class="arm left" data-dir="left"></span>
+              </div>
+            </div>
+            <div class="face">
+              <button class="pad-btn round" type="button" data-key="88"><span>X</span></button>
+              <button class="pad-btn round primary" type="button" data-key="90"><span>Z</span></button>
+            </div>
+          </div>
+
+          <div id="game-menu" class="sheet" hidden>
+            <div class="sheet-panel">
+              <p id="game-menu-title" class="sheet-title"></p>
+              <button id="resume" class="button" type="button">ゲームに戻る</button>
+              <button id="quit-from-menu" class="button danger" type="button">終了する</button>
+            </div>
+          </div>
+        </div>
+        <i class="home-indicator" aria-hidden="true"></i>
       </div>
     </div>
   </div>

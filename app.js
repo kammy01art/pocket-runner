@@ -467,13 +467,28 @@ window.addEventListener('keydown', (event) => {
   // F5（再読み込み）や F12（開発ツール）はブラウザに任せる
   if (!/^F\d+$/.test(event.code)) event.preventDefault();
   unlockAudio();
-  if (!event.repeat) pressKey(key);
+  if (event.repeat) return;
+  pressKey(key);
+  showKey(key, true);
 });
 
 window.addEventListener('keyup', (event) => {
   const key = toKeyCode(event.code);
-  if (key !== null) releaseKey(key);
+  if (key === null) return;
+  releaseKey(key);
+  showKey(key, false);
 });
+
+// キーボードで押したキーも、画面のボタンを光らせて見せる（PC で見た目を確かめやすくするため）
+const KEY_VISUALS = {
+  37: '.arm.left', 38: '.arm.up', 39: '.arm.right', 40: '.arm.down',
+  90: '.pad-btn[data-key="90"]', 88: '.pad-btn[data-key="88"]', 67: '.pad-btn[data-key="67"]',
+};
+
+function showKey(key, on) {
+  const selector = KEY_VISUALS[key];
+  if (selector) document.querySelector(`.controls ${selector}`)?.classList.toggle('on', on);
+}
 window.addEventListener('blur', releaseAllKeys);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) releaseAllKeys();
@@ -483,8 +498,63 @@ document.addEventListener('visibilitychange', () => {
 // 指で触れる端末では画面にボタンを出す。PC で確かめるときは URL に ?touch を付ける
 
 const useTouch = new URLSearchParams(location.search).has('touch') || matchMedia('(any-pointer: coarse)').matches;
-$('player').classList.toggle('touch', useTouch);
 $('player').addEventListener('contextmenu', (event) => event.preventDefault());
+
+// --- 表示の切り替え（PC） ---
+// スマホでは画面いっぱいにタッチ操作を出す。PC では iPhone 15 Pro の大きさの枠で
+// 「縦持ち」「横持ち」を再現するか、ゲーム画面だけを大きく出すかを選べる（選んだものは覚えておく）。
+
+const VIEWS = ['portrait', 'landscape', 'plain'];
+const VIEW_STORAGE_KEY = 'pocket-runner:view';
+
+function setView(view) {
+  const player = $('player');
+  player.dataset.view = view;
+  player.classList.toggle('touch', view !== 'plain');
+  player.classList.toggle('framed', view !== 'plain');
+  for (const button of document.querySelectorAll('.view-switch button')) {
+    button.setAttribute('aria-pressed', String(button.dataset.view === view));
+  }
+  fitDevice();
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    // 保存できなくても表示は切り替わる
+  }
+}
+
+// 枠（実寸 393×852）がウィンドウに収まるように、縮める割合を決める。大きくはしない
+const DEVICE_SIZE = { portrait: [393, 852], landscape: [852, 393] };
+const deviceArea = document.querySelector('.device-area');
+
+function fitDevice() {
+  const size = DEVICE_SIZE[$('player').dataset.view];
+  if (!size) return;
+  const style = getComputedStyle(deviceArea);
+  const width = deviceArea.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const height = deviceArea.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const scale = Math.max(0.1, Math.min(1, width / size[0], height / size[1]));
+  $('player').style.setProperty('--device-scale', scale.toFixed(3));
+}
+new ResizeObserver(fitDevice).observe(deviceArea);
+
+if (useTouch) {
+  $('player').classList.add('touch', 'touch-device');
+} else {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(VIEW_STORAGE_KEY);
+  } catch {
+    // 読めなければ縦持ちから
+  }
+  setView(VIEWS.includes(saved) ? saved : 'portrait');
+  for (const button of document.querySelectorAll('.view-switch button')) {
+    button.addEventListener('click', () => {
+      setView(button.dataset.view);
+      button.blur(); // フォーカスが残ると、ゲーム中の Enter や Space でまた押されてしまう
+    });
+  }
+}
 
 function capturePointer(element, event) {
   // 指がボタンの外に出ても、離すまでは同じボタンの操作として扱う
@@ -537,6 +607,7 @@ function setDpadDirections(next) {
 
 dpad.addEventListener('pointerdown', (event) => {
   if (!running || dpadPointer !== null) return;
+  event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
   dpadPointer = event.pointerId;
   capturePointer(dpad, event);
   setDpadDirections(directionsAt(event));
@@ -561,6 +632,7 @@ for (const button of document.querySelectorAll('.pad-btn')) {
   const key = Number(button.dataset.key);
   button.addEventListener('pointerdown', (event) => {
     if (!running || buttonPointers.has(button)) return;
+    event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
     buttonPointers.set(button, event.pointerId);
     capturePointer(button, event);
     button.classList.add('on');
