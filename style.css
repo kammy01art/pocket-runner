@@ -337,9 +337,14 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .player.touch {
   touch-action: none;
   overscroll-behavior: none;
+}
+/* 長押しで虫メガネ（文字選択）やメニューが出ないように、タップしたときの色（Android の水色の四角）も出さない */
+.player.touch,
+.player.touch * {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .player.touch .screen {
@@ -556,9 +561,13 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   height: var(--dpad-size);
   overflow: visible;
   filter: drop-shadow(0 3px 2px rgb(0 0 0 / .5)) drop-shadow(0 1px 0 rgb(0 0 0 / .35));
+  /* 本物の十字キーのように、真ん中を支点にして押した向きへ全体が傾く（角度は app.js の showMove で決める） */
+  transform: perspective(260px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  transition: transform .05s ease-out;
 }
-.dpad .press { fill: rgb(0 0 0 / .5); opacity: 0; }
-.dpad .press.on { opacity: 1; }
+/* 押した側は傾いて奥に沈むので、ほんの少しだけ影になる */
+.dpad .press { fill: rgb(0 0 0 / .5); opacity: 0; transition: opacity .05s ease-out; }
+.dpad .press.on { opacity: .35; }
 
 /* スティック（3DS のスライドパッドのような、くぼみの中で動く丸いキャップ） */
 .stick .well {
@@ -916,6 +925,68 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .sheet-option:focus-visible::before,
 .sheet-option:active::before,
 .sheet-option[aria-pressed="true"]::before { opacity: 1; }
+
+/* 音量。バーはアンダーテイルの HP バー（黄色が残り、赤が減った分） */
+.sheet-heading-row { display: flex; justify-content: space-between; gap: 12px; }
+.sheet-value { color: var(--ut-white); }
+.sheet-volume {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 4px;
+}
+.sheet-step {
+  height: 36px;
+  padding: 0;
+  border: 2px solid var(--ut-white);
+  background: none;
+  color: var(--ut-white);
+  font: 400 18px/1 var(--font-pixel);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-step:active,
+.sheet-step:focus-visible { border-color: var(--ut-yellow); color: var(--ut-yellow); outline: none; }
+.sheet-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+}
+.sheet-slider:focus { outline: none; }
+.sheet-slider::-webkit-slider-runnable-track {
+  height: 16px;
+  background: linear-gradient(90deg, var(--ut-yellow) var(--fill, 100%), var(--ut-red) 0);
+}
+.sheet-slider::-moz-range-track {
+  height: 16px;
+  background: linear-gradient(90deg, var(--ut-yellow) var(--fill, 100%), var(--ut-red) 0);
+}
+/* つまみは指で掴みやすいよう、バーより背の高い白いブロック */
+.sheet-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 30px;
+  margin-top: -7px;
+  border: 3px solid var(--ut-black);
+  border-radius: 0;
+  background: var(--ut-white);
+  box-sizing: border-box;
+}
+.sheet-slider::-moz-range-thumb {
+  width: 14px;
+  height: 30px;
+  border: 3px solid var(--ut-black);
+  border-radius: 0;
+  background: var(--ut-white);
+  box-sizing: border-box;
+}
+.sheet-slider:focus-visible::-webkit-slider-thumb { background: var(--ut-yellow); }
+.sheet-slider:focus-visible::-moz-range-thumb { background: var(--ut-yellow); }
 
 @media (prefers-reduced-motion: reduce) {
   .power-led { animation: none; }

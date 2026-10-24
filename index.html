@@ -208,6 +208,13 @@
                 <button class="sheet-option" type="button" data-move="dpad">じゅうじキー</button>
                 <button class="sheet-option" type="button" data-move="stick">スティック</button>
               </div>
+              <!-- 音量。端末の音量とは別に、ゲームの音だけを小さくできる（電話しながら遊ぶときなど） -->
+              <p class="sheet-heading sheet-heading-row"><span>おんりょう</span><span id="volume-value" class="sheet-value"></span></p>
+              <div class="sheet-volume">
+                <button class="sheet-step" type="button" data-volume-step="-10" aria-label="音量を下げる">－</button>
+                <input id="volume" class="sheet-slider" type="range" min="0" max="100" step="5" aria-label="音量">
+                <button class="sheet-step" type="button" data-volume-step="10" aria-label="音量を上げる">＋</button>
+              </div>
               <hr class="sheet-rule">
               <button id="resume" class="sheet-option" type="button">ゲームにもどる</button>
               <button id="quit-from-menu" class="sheet-option" type="button">しゅうりょうする</button>

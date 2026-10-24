@@ -477,11 +477,13 @@ async function showSaveInfo() {
   else info.textContent = 'まだ セーブしていません';
 }
 
-$('open-menu').addEventListener('click', () => {
+function openGameMenu() {
+  if (!$('game-menu').hidden) return;
   releaseAllKeys();
   $('open-menu').blur(); // フォーカスが残ると、ゲーム中の Enter や Space でまた押されてしまう
   $('game-menu').hidden = false;
   showSaveInfo();
+  showVolume();
   // メニューを開いているあいだ、1秒あたりのコマ数を出す（なめらかさの目安）
   let last = frameCount;
   clearInterval(fpsTimer);
@@ -492,7 +494,10 @@ $('open-menu').addEventListener('click', () => {
     $('fps').textContent = `${frameCount - last}fps`;
     last = frameCount;
   }, 1000);
-});
+}
+// 本体では長押しの虫メガネを止めるために touchstart を止めていて click が来ないので、指を離したときに開く
+$('open-menu').addEventListener('pointerup', openGameMenu);
+
 $('resume').addEventListener('click', () => {
   $('game-menu').hidden = true;
   clearInterval(fpsTimer);
@@ -570,6 +575,80 @@ if (NativeAudioContext) {
     });
     return node;
   };
+}
+
+// ===== 音量 =====
+// 端末の音量とは別に、ゲームの音だけを小さくできるようにする（電話しながら遊ぶときなど）。
+// エンジンがスピーカー（destination）につなぐ音を、あいだに音量のつまみ（GainNode）をはさんでつなぎ直す。
+
+const VOLUME_STORAGE_KEY = 'pocket-runner:volume';
+let volume = 100; // 0〜100
+const volumeGains = new Map(); // AudioContext → 音量のつまみ
+
+// 耳には音の強さの比がそのまま大きさに聞こえないので、2乗して目盛りと聞こえ方をそろえる
+const volumeToGain = (value) => (value / 100) ** 2;
+
+if (window.AudioNode && window.AudioDestinationNode) {
+  const connectNode = AudioNode.prototype.connect;
+  const disconnectNode = AudioNode.prototype.disconnect;
+  const volumeGainFor = (destination) => {
+    let gain = volumeGains.get(destination.context);
+    if (!gain) {
+      gain = destination.context.createGain();
+      gain.gain.value = volumeToGain(volume);
+      connectNode.call(gain, destination);
+      volumeGains.set(destination.context, gain);
+    }
+    return gain;
+  };
+  AudioNode.prototype.connect = function (destination, ...rest) {
+    if (destination instanceof AudioDestinationNode) {
+      connectNode.call(this, volumeGainFor(destination), ...rest);
+      return destination;
+    }
+    return connectNode.call(this, destination, ...rest);
+  };
+  AudioNode.prototype.disconnect = function (destination, ...rest) {
+    if (destination instanceof AudioDestinationNode) return disconnectNode.call(this, volumeGainFor(destination), ...rest);
+    return disconnectNode.apply(this, arguments);
+  };
+}
+
+function setVolume(value) {
+  volume = Math.min(100, Math.max(0, Math.round(value)));
+  for (const gain of volumeGains.values()) {
+    // いきなり変えるとプツッと鳴るので、少しだけなめらかに変える
+    gain.gain.setTargetAtTime(volumeToGain(volume), gain.context.currentTime, 0.02);
+  }
+  showVolume();
+  try {
+    localStorage.setItem(VOLUME_STORAGE_KEY, String(volume));
+  } catch {
+    // 保存できなくても変わる
+  }
+}
+
+function showVolume() {
+  $('volume').value = String(volume);
+  $('volume').style.setProperty('--fill', `${volume}%`);
+  $('volume-value').textContent = `${volume}%`;
+}
+
+$('volume').addEventListener('input', () => setVolume(Number($('volume').value)));
+// iPhone ではバーを押しても、つまみを掴まないと動かないので、ボタンでも変えられるようにする
+for (const button of document.querySelectorAll('[data-volume-step]')) {
+  button.addEventListener('click', () => setVolume(volume + Number(button.dataset.volumeStep)));
+}
+
+{
+  let saved = null;
+  try {
+    saved = localStorage.getItem(VOLUME_STORAGE_KEY);
+  } catch {
+    // 読めなければ最大
+  }
+  const value = Number(saved ?? 100);
+  setVolume(Number.isFinite(value) ? value : 100);
 }
 
 // ===== キーボード入力 =====
@@ -676,6 +755,13 @@ document.addEventListener('visibilitychange', () => {
 
 const useTouch = new URLSearchParams(location.search).has('touch') || matchMedia('(any-pointer: coarse)').matches;
 $('player').addEventListener('contextmenu', (event) => event.preventDefault());
+$('player').addEventListener('selectstart', (event) => event.preventDefault());
+
+// iPhone で長押しすると虫メガネ（文字選択の拡大鏡）が出るので、本体への touchstart を止める。
+// 指の動きは pointer のイベントで受け取るので影響しない。メニュー（.sheet）の中は普通に操作できるよう止めない
+document.querySelector('.screen').addEventListener('touchstart', (event) => {
+  if (!event.target.closest('.sheet')) event.preventDefault();
+}, { passive: false });
 
 // --- 表示の切り替え（PC） ---
 // スマホでは画面いっぱいにタッチ操作を出す。PC では iPhone 15 Pro の大きさの枠で
@@ -832,7 +918,7 @@ function guardBack() {
 
 window.addEventListener('popstate', () => {
   if ($('player').hidden) return;
-  if ($('game-menu').hidden) $('open-menu').click();
+  if ($('game-menu').hidden) openGameMenu();
   else $('resume').click();
   history.pushState({ playing: true }, '');
 });
@@ -901,6 +987,8 @@ const MOVE_STORAGE_KEY = 'pocket-runner:move';
 const moveZones = { dpad: $('dpad'), stick: $('stick') };
 const stickWell = moveZones.stick.querySelector('.well');
 const stickCap = moveZones.stick.querySelector('.stick-cap');
+const dpadSvg = moveZones.dpad.querySelector('.dpad-svg');
+const DPAD_TILT = 12; // 十字キーを押したときに傾ける角度（度）
 let moveMode = 'dpad';
 let movePointer = null;
 let moveDirections = new Set();
@@ -960,6 +1048,9 @@ function showMove(directions) {
   }
   const x = (directions.has('right') ? 1 : 0) - (directions.has('left') ? 1 : 0);
   const y = (directions.has('down') ? 1 : 0) - (directions.has('up') ? 1 : 0);
+  // 十字キー全体を、押した向きが奥に沈むように傾ける
+  dpadSvg.style.setProperty('--tilt-x', `${-y * DPAD_TILT}deg`);
+  dpadSvg.style.setProperty('--tilt-y', `${x * DPAD_TILT}deg`);
   if (movePointer === null) moveCap(x * 1000, y * 1000);
 }
 
@@ -1060,6 +1151,8 @@ function resetTouchControls() {
   for (const zone of Object.values(moveZones)) zone.classList.remove('active');
   stickWell.style.setProperty('--hx', '0px');
   stickWell.style.setProperty('--hy', '0px');
+  dpadSvg.style.setProperty('--tilt-x', '0deg');
+  dpadSvg.style.setProperty('--tilt-y', '0deg');
   buttonPointers.clear();
   document.querySelectorAll('.controls .on').forEach((el) => el.classList.remove('on'));
 }
