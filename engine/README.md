@@ -1,7 +1,17 @@
 # engine
 
 Butterscotch（GameMaker: Studio ランナーのオープンソース再実装）の WebAssembly 版ビルドです。
-このフォルダのファイルには手を加えていません。
+
+## 元のビルドからの変更
+
+`butterscotch.mjs` の1か所だけ変えています（`Pocket Runner: Safari` で検索すると見つかります）。
+
+- ブラウザの保存領域へファイルを書くとき（`FileSystemAsyncAccessHandle` の `write` と `truncate`）、
+  位置を指定して書き足す代わりに、ファイル全体を読み直して丸ごと書き直す。
+  Safari では位置を指定した書き込みが容量を多く数えて失敗することがあり（WebKit bug 320355）、
+  iPhone でセーブが残らなかったため。書き込むデータは待つ前にコピーし、途中でメモリが動いても壊れないようにしている。
+
+`butterscotch.wasm` は元のままです。
 
 - 入手元: https://nightly.link/ButterscotchRunner/Butterscotch/workflows/build/main/butterscotch-web.zip
 - ソースコード: https://github.com/ButterscotchRunner/Butterscotch

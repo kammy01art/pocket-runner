@@ -378,6 +378,7 @@ async function play(id) {
   $('game-menu').hidden = true;
   $('game-menu-title').textContent = id;
   $('player-status').textContent = `${id} を起動しています…`;
+  currentGame = id;
 
   let argv = 0;
   let pointers = [];
@@ -422,11 +423,39 @@ $('quit').addEventListener('click', () => {
 
 // ゲーム中のメニュー（タッチ操作のとき）。開いているあいだもゲームは止まらない
 let fpsTimer = 0;
+let currentGame = null; // 遊んでいるゲーム（セーブの置き場所の名前）
+
+// 最後にセーブした時刻を出す（セーブできているかを確かめるため）。
+// アンダーテイルはセーブポイントで file0 に記録するので、あればその時刻、なければいちばん新しいファイルの時刻を出す
+async function showSaveInfo() {
+  const info = $('save-info');
+  info.textContent = '';
+  if (!currentGame) return;
+  let latest = null;
+  let file0 = null;
+  try {
+    const saves = await (await navigator.storage.getDirectory()).getDirectoryHandle('saves');
+    const dir = await saves.getDirectoryHandle(currentGame);
+    for await (const [name, handle] of dir.entries()) {
+      if (handle.kind !== 'file') continue;
+      const time = (await handle.getFile()).lastModified;
+      if (name === 'file0') file0 = time;
+      latest = Math.max(latest ?? 0, time);
+    }
+  } catch {
+    // まだセーブの置き場所がない
+  }
+  const format = (time) => new Date(time).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (file0) info.textContent = `さいごに セーブした じかん: ${format(file0)}`;
+  else if (latest) info.textContent = `さいごの きろく: ${format(latest)}（セーブポイントでは まだ セーブしていません）`;
+  else info.textContent = 'まだ セーブしていません';
+}
 
 $('open-menu').addEventListener('click', () => {
   releaseAllKeys();
   $('open-menu').blur(); // フォーカスが残ると、ゲーム中の Enter や Space でまた押されてしまう
   $('game-menu').hidden = false;
+  showSaveInfo();
   // メニューを開いているあいだ、1秒あたりのコマ数を出す（なめらかさの目安）
   let last = frameCount;
   $('fps').textContent = '';
