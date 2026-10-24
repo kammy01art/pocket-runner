@@ -420,7 +420,8 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .player.touch .bezel {
   position: relative;
   display: block;
-  padding: 26px 26px 16px;
+  /* 左は電源ランプと「SOUL」の分だけ広くとる（ゲームボーイも左が広い） */
+  padding: 26px 26px 16px 32px;
   /* ゲームボーイの画面まわりは、右下の角だけ大きく丸い */
   border-radius: 10px 10px 44px 10px;
   background: linear-gradient(180deg, var(--bezel-top), var(--bezel-mid) 55%, var(--bezel-bottom));
@@ -459,15 +460,17 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .player.touch .power {
   position: absolute;
   top: 36%;
-  left: 7px;
+  left: 3px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  width: 27px;
   margin: 0;
   color: var(--bezel-ink);
-  font: 700 6.5px/1 var(--label-font);
-  letter-spacing: .06em;
+  font: 700 6px/1 var(--label-font);
+  letter-spacing: .02em;
+  white-space: nowrap;
 }
 .power-led {
   width: 10px;
@@ -644,11 +647,13 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   height: var(--btn-x);
   border-radius: 50%;
   background: radial-gradient(circle at 36% 30%, var(--btn-hi) 0, var(--btn-mid) 34%, var(--btn-lo) 78%);
+  /* --ring はボタンのまわりのくぼみ（片手の並びのとき、ボタンが1つずつ離れるので付ける） */
   box-shadow:
     0 3px 0 var(--btn-edge),
     0 6px 8px rgb(0 0 0 / .45),
     inset 0 -4px 6px rgb(0 0 0 / .25),
-    inset 0 2px 3px rgb(255 255 255 / .3);
+    inset 0 2px 3px rgb(255 255 255 / .3),
+    var(--ring, 0 0 0 0 transparent);
   transition: transform .05s, box-shadow .05s;
 }
 .face [data-key="90"] .dome { width: var(--btn-z); height: var(--btn-z); }
@@ -662,7 +667,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .face [data-key="90"] .dome b { font-size: calc(var(--btn-z) * .42); }
 .face .pad-btn.on .dome {
   background: radial-gradient(circle at 36% 30%, var(--btn-mid) 0, var(--btn-lo) 55%, var(--btn-edge));
-  box-shadow: 0 1px 0 var(--btn-edge), 0 2px 3px rgb(0 0 0 / .4), inset 0 3px 6px rgb(0 0 0 / .45);
+  box-shadow: 0 1px 0 var(--btn-edge), 0 2px 3px rgb(0 0 0 / .4), inset 0 3px 6px rgb(0 0 0 / .45), var(--ring, 0 0 0 0 transparent);
   transform: translateY(2px);
 }
 
@@ -746,7 +751,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
     align-self: center;
     height: calc(100cqh - var(--safe-top) - var(--safe-bottom));
     /* 画面まわりの中で、ゲーム画面がちょうど収まる幅（左右に操作を置く幅は残す） */
-    width: calc((100cqh - var(--safe-top) - var(--safe-bottom) - 20px - 42px - 30px) * (var(--game-aspect, 4 / 3)) + 52px);
+    width: calc((100cqh - var(--safe-top) - var(--safe-bottom) - 20px - 42px - 30px) * (var(--game-aspect, 4 / 3)) + 58px);
     max-width: calc(100cqw - 2 * var(--side) - var(--safe-left) - var(--safe-right));
     padding: 10px 0;
   }
@@ -760,6 +765,82 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   .speaker i { height: 28px; }
 }
 
+/* --- かたて: 右手の親指だけで遊ぶときの並び（寝ころんで遊ぶときなど）。
+       十字キーを真ん中の下に大きく、Z を右下に大きく、X を右上に。SYSTEM・MENU は左下に小さく。
+       十字キーの右の腕の上下に X と Z が来るように少し重ねて並べ、スマホの幅に収める --- */
+
+.player.touch[data-hand="one"] .screen {
+  --dpad-size: clamp(140px, 41cqmin, 180px);
+  --btn-z: clamp(90px, 26.5cqmin, 116px);
+  --btn-x: clamp(62px, 18.5cqmin, 80px);
+  --ring: 0 0 0 7px var(--recess);
+}
+/* 操作部分の中に、ボタンを位置で置く（X・Z・十字キーの位置は、十字キーの大きさをもとに決める） */
+.player.touch[data-hand="one"] .controls {
+  position: relative;
+  display: block;
+}
+.player.touch[data-hand="one"] .face { display: contents; }
+.player.touch[data-hand="one"] .face::before { display: none; }
+
+/* 十字キー（真ん中の下）。まわり 20px も触れる範囲にする */
+.player.touch[data-hand="one"] .move {
+  position: absolute;
+  bottom: calc(var(--dpad-size) * .05 - 4px);
+  left: calc(47% - var(--dpad-size) * .57 - 20px);
+  width: calc(var(--dpad-size) * 1.14 + 40px);
+  height: calc(var(--dpad-size) * 1.14 + 40px);
+}
+/* X（右上）。十字キーの右の腕より上 */
+.player.touch[data-hand="one"] .face [data-key="88"] {
+  top: auto;
+  right: 14px;
+  bottom: calc(var(--dpad-size) * 1.17 + 8px - var(--btn-x) / 2);
+  left: auto;
+}
+/* Z（右下、大きく）。十字キーの右の腕より下 */
+.player.touch[data-hand="one"] .face [data-key="90"] {
+  top: auto;
+  right: 4px;
+  bottom: calc(var(--dpad-size) * .26 + 8px - var(--btn-z) / 2);
+}
+/* SYSTEM・MENU（左下に、縦に小さく） */
+.player.touch[data-hand="one"] .pills {
+  position: absolute;
+  bottom: 6px;
+  left: 4px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+}
+.player.touch[data-hand="one"] .pill-btn { padding: 8px 4px 2px; }
+.player.touch[data-hand="one"] .rubber { width: 44px; height: 13px; }
+/* スピーカーの穴は、左下の SYSTEM・MENU の上に小さく */
+.player.touch[data-hand="one"] .speaker {
+  position: absolute;
+  bottom: 112px;
+  left: 14px;
+  padding: 0;
+  transform: rotate(-28deg) scale(.6);
+  transform-origin: left bottom;
+}
+
+/* 横持ちのかたて: ゲーム画面を左に、操作を右にまとめる */
+@container device (orientation: landscape) {
+  .player.touch[data-hand="one"] .screen {
+    --dpad-size: clamp(116px, 33cqmin, 150px);
+    --btn-z: clamp(76px, 22cqmin, 96px);
+    --btn-x: clamp(56px, 16cqmin, 70px);
+
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "stage controls";
+  }
+  .player.touch[data-hand="one"] .stage {
+    max-width: calc(100cqw - 330px - var(--safe-left) - var(--safe-right));
+  }
+}
+
 /* ===== ゲーム中のメニュー（アンダーテイルの会話の枠） ===== */
 
 .sheet {
@@ -768,14 +849,19 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   z-index: 2;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: max(12px, var(--safe-top)) max(16px, var(--safe-right)) max(12px, var(--safe-bottom)) max(16px, var(--safe-left));
   background: rgb(0 0 0 / .72);
 }
+/* 項目が多いので、入りきらないときは中だけスクロールできるようにする */
 .sheet-panel {
   display: grid;
   gap: 2px;
-  width: min(340px, 100%);
-  padding: 18px 22px;
+  width: min(360px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: 16px 20px;
   background: var(--ut-black);
   border: 4px solid var(--ut-white);
 }
@@ -808,7 +894,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.sheet-choices .sheet-option { padding-left: 28px; font-size: 17px; }
+.sheet-choices .sheet-option { min-height: 40px; padding-left: 28px; font-size: 17px; }
 /* 選んでいる項目には、ハートのカーソルを出して黄色にする */
 .sheet-option::before {
   content: "";

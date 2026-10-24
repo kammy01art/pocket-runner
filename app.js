@@ -1003,6 +1003,29 @@ for (const button of document.querySelectorAll('.sheet-option[data-move]')) {
   button.addEventListener('click', () => setMoveMode(button.dataset.move));
 }
 
+// --- ボタンの並び（りょうて / かたて） ---
+// かたては、右手の親指だけで遊べる並び（寝ころんで遊ぶときなど）。選んだものは覚えておく
+
+const HANDS = ['two', 'one'];
+const HAND_STORAGE_KEY = 'pocket-runner:hand';
+
+function setHand(hand) {
+  releaseAllKeys();
+  $('player').dataset.hand = hand;
+  for (const button of document.querySelectorAll('.sheet-option[data-hand]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.hand === hand));
+  }
+  try {
+    localStorage.setItem(HAND_STORAGE_KEY, hand);
+  } catch {
+    // 保存できなくても切り替わる
+  }
+}
+
+for (const button of document.querySelectorAll('.sheet-option[data-hand]')) {
+  button.addEventListener('click', () => setHand(button.dataset.hand));
+}
+
 // --- Z / X / C ボタン ---
 
 const buttonPointers = new Map(); // ボタン → 押している指
@@ -1049,6 +1072,14 @@ function resetTouchControls() {
     // 読めなければ十字キー
   }
   setMoveMode(MOVE_MODES.includes(saved) ? saved : 'dpad');
+
+  let savedHand = null;
+  try {
+    savedHand = localStorage.getItem(HAND_STORAGE_KEY);
+  } catch {
+    // 読めなければりょうて
+  }
+  setHand(HANDS.includes(savedHand) ? savedHand : 'two');
 }
 
 // ===== 画面の拡大を止める =====
