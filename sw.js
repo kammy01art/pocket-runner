@@ -3,7 +3,7 @@
 // 保存してあるファイルをすぐに使い、裏で新しいものに入れ替える（更新は次に開いたときに反映される）。
 
 // エンジンなど大事なファイルを変えたときは数字を上げる（保存しなおしを確実にする）
-const CACHE = 'pocket-runner-v3';
+const CACHE = 'pocket-runner-v4';
 const APP_FILES = [
   './',
   './index.html',

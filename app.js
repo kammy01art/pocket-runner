@@ -517,6 +517,61 @@ function unlockAudio() {
   }
 }
 
+// ===== 音が途切れないようにする =====
+// エンジン（miniaudio）は、ゲームと同じ場所で少しずつ（約12ms分ずつ）音を作ってブラウザに渡している。
+// スマホで電話しながら遊ぶときなどに少しでも遅れると音が間に合わず、ブツブツと途切れる。
+// そこで、ブラウザには大きな単位（約40ms分）で頼み、エンジンには元の小さな単位で何回かに分けて作らせる。
+// また、音の細かさ（サンプリング周波数）を 48kHz に固定する。エンジンは起動したときの値を使うので、
+// 電話中に起動すると電話用の低い値のまま固定され、音が荒くなるため。
+
+const AUDIO_SAMPLE_RATE = 48000;
+const AUDIO_BLOCK_SECONDS = 0.04;
+
+const NativeAudioContext = window.AudioContext || window.webkitAudioContext;
+if (NativeAudioContext) {
+  class SteadyAudioContext extends NativeAudioContext {
+    constructor(options = {}) {
+      super({ ...options, sampleRate: AUDIO_SAMPLE_RATE });
+    }
+  }
+  window.AudioContext = SteadyAudioContext;
+  if (window.webkitAudioContext) window.webkitAudioContext = SteadyAudioContext;
+
+  const audioProto = (window.BaseAudioContext ?? NativeAudioContext).prototype;
+  const createScriptProcessor = audioProto.createScriptProcessor;
+  audioProto.createScriptProcessor = function (bufferSize = 0, inputs = 2, outputs = 2) {
+    const target = Math.min(16384, 2 ** Math.ceil(Math.log2(this.sampleRate * AUDIO_BLOCK_SECONDS)));
+    // 録音を使うもの・すでに十分大きいものは、そのまま
+    if (inputs !== 0 || !bufferSize || bufferSize >= target) {
+      return createScriptProcessor.call(this, bufferSize, inputs, outputs);
+    }
+    const node = createScriptProcessor.call(this, target, 0, outputs);
+    const parts = target / bufferSize;
+    const channels = Array.from({ length: outputs }, () => new Float32Array(bufferSize));
+    // エンジンには、元の大きさの入れ物を渡したように見せる
+    const smallBuffer = { numberOfChannels: outputs, length: bufferSize, getChannelData: (c) => channels[c] };
+    let handler = null;
+    Object.defineProperty(node, 'onaudioprocess', {
+      configurable: true,
+      get: () => handler,
+      set: (fn) => {
+        handler = fn;
+      },
+    });
+    node.addEventListener('audioprocess', (event) => {
+      const output = event.outputBuffer;
+      for (let part = 0; part < parts; part++) {
+        if (handler) handler.call(node, { outputBuffer: smallBuffer, inputBuffer: null, playbackTime: event.playbackTime });
+        else for (const channel of channels) channel.fill(0);
+        for (let c = 0; c < output.numberOfChannels; c++) {
+          output.getChannelData(c).set(channels[Math.min(c, outputs - 1)], part * bufferSize);
+        }
+      }
+    });
+    return node;
+  };
+}
+
 // ===== キーボード入力 =====
 // エンジンは Windows の仮想キーコードを受け取る
 
