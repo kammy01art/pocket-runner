@@ -1,7 +1,15 @@
-import createModule from './engine/butterscotch.mjs';
 import { openZipEntry, readZipEntries } from './zip.js';
 
 const $ = (id) => document.getElementById(id);
+
+// ===== どのエンジンを使うか =====
+// 新しいブラウザ（JSPI がある）では速い標準のエンジン、JSPI がない少し古いブラウザ
+// （古めの Android の Chrome、Samsung Internet、iOS 26 など）では互換エンジン（Asyncify 版）を使う。
+// URL に ?engine=compat を付けると、互換エンジンを試せる。
+
+const hasJspi = typeof WebAssembly.Suspending === 'function' && typeof WebAssembly.promising === 'function';
+const useCompatEngine = !hasJspi || new URLSearchParams(location.search).get('engine') === 'compat';
+const ENGINE_DIR = new URL(useCompatEngine ? './engine/compat/' : './engine/', import.meta.url);
 
 // ===== ログ =====
 
@@ -23,14 +31,15 @@ function log(message, kind = 'info') {
 function checkEnvironment() {
   const checks = [
     {
-      label: 'WebAssembly JSPI',
-      ok: typeof WebAssembly.Suspending === 'function' && typeof WebAssembly.promising === 'function',
-      note: 'Chrome 137以降、Safari 27以降、Firefox 153以降が必要です',
+      label: useCompatEngine ? 'エンジン: 互換モード（少しゆっくり）' : 'エンジン: 標準（JSPI）',
+      ok: typeof WebAssembly === 'object',
+      note: 'このブラウザでは WebAssembly が使えません',
     },
     {
       label: 'ブラウザ内の保存領域（OPFS）',
-      ok: window.isSecureContext && typeof navigator.storage?.getDirectory === 'function',
-      note: 'HTTPSのページで開く必要があります',
+      ok: window.isSecureContext && typeof navigator.storage?.getDirectory === 'function'
+        && typeof FileSystemFileHandle === 'function' && 'createWritable' in FileSystemFileHandle.prototype,
+      note: 'HTTPSのページで開き、ブラウザを新しくしてください（Chrome 109以降、Safari 26以降など）',
     },
     {
       label: 'WebGL 2',
@@ -322,25 +331,33 @@ function sleepUntilVsync(ms) {
   });
 }
 
+// 途中で待つことがあるエンジンの関数を呼ぶ。標準のエンジンはそのまま呼べば Promise が返り、
+// 互換エンジンは ccall の async で呼ぶと、終わったときに解決する Promise が返る
+function callEngine(Module, name, argTypes = [], args = []) {
+  return useCompatEngine
+    ? Module.ccall(name, 'number', argTypes, args, { async: true })
+    : Module[`_${name}`](...args);
+}
+
 function loadEngine() {
   enginePromise ??= (async () => {
-    log('エンジンを読み込んでいます…');
+    log(`エンジンを読み込んでいます…（${useCompatEngine ? '互換モード' : '標準'}）`);
+    const { default: createModule } = await import(new URL('butterscotch.mjs', ENGINE_DIR).href);
     const Module = await createModule({
       print: (text) => log(text),
       printErr: (text) => log(text, 'error'),
-      // エンジンの「待つ」処理だけを差し替えて読み込む
+      // 標準のエンジンは「待つ」処理だけを差し替えて読み込む（互換エンジンはそのまま）
       instantiateWasm(imports, receiveInstance) {
-        if (typeof WebAssembly.Suspending === 'function') {
+        if (!useCompatEngine) {
           imports.env.emscripten_sleep = new WebAssembly.Suspending(sleepUntilVsync);
         }
-        const url = new URL('./engine/butterscotch.wasm', import.meta.url);
-        WebAssembly.instantiateStreaming(fetch(url), imports)
+        WebAssembly.instantiateStreaming(fetch(new URL('butterscotch.wasm', ENGINE_DIR)), imports)
           .then(({ instance }) => receiveInstance(instance))
           .catch((e) => log(`エンジンを読み込めませんでした: ${e?.message ?? e}`, 'error'));
         return {};
       },
     });
-    const rc = await Module._mountOpfs();
+    const rc = await callEngine(Module, 'mountOpfs');
     if (rc !== 0) throw new Error('保存領域（OPFS）を割り当てられませんでした');
     return Module;
   })();
@@ -373,6 +390,11 @@ async function play(id) {
     return;
   }
 
+  // 全画面・向きの固定（Android）や画面を暗くしない設定は、ボタンを押した直後でないと頼めないので、最初に行う
+  enterImmersive();
+  keepScreenOn();
+  guardBack();
+
   $('menu').hidden = true;
   $('player').hidden = false;
   $('game-menu').hidden = true;
@@ -395,7 +417,7 @@ async function play(id) {
     running = Module;
     $('player-status').textContent = id;
     if (!useTouch) $('canvas').focus();
-    const code = await Module._startRunner(pointers.length, argv);
+    const code = await callEngine(Module, 'startRunner', ['number', 'number'], [pointers.length, argv]);
     log(`ゲームが終了しました（コード ${code}）`);
   } catch (e) {
     engineBroken = true;
@@ -414,6 +436,10 @@ async function play(id) {
     }
     $('player').hidden = true;
     $('menu').hidden = false;
+    exitImmersive();
+    releaseScreen();
+    // 「戻る」に備えて足しておいた履歴を片付ける
+    if (history.state?.playing) history.back();
   }
 }
 
@@ -458,8 +484,10 @@ $('open-menu').addEventListener('click', () => {
   showSaveInfo();
   // メニューを開いているあいだ、1秒あたりのコマ数を出す（なめらかさの目安）
   let last = frameCount;
-  $('fps').textContent = '';
   clearInterval(fpsTimer);
+  // 互換エンジンは中の名前が縮められていて「待つ」処理を差し替えられないので、コマ数は出さない
+  $('fps').textContent = useCompatEngine ? '互換モード' : '';
+  if (useCompatEngine) return;
   fpsTimer = setInterval(() => {
     $('fps').textContent = `${frameCount - last}fps`;
     last = frameCount;
@@ -674,7 +702,85 @@ function setLayout(next) {
     // 保存できなくても切り替わる
   }
   applyLayout();
+  if (running) lockOrientation();
 }
+
+// --- Android: 全画面と、画面の向きの固定 ---
+// Android の Chrome では、遊んでいるあいだ全画面にして、選んだ向きに画面を固定できる。
+// iPhone は対応していないので、ホーム画面に追加して全画面で開き、向きは本体ごと回して合わせる。
+
+const ORIENTATION_TYPES = {
+  landscape: 'landscape-primary',
+  'landscape-flip': 'landscape-secondary',
+  portrait: 'portrait-primary',
+};
+
+async function lockOrientation() {
+  if (!useTouch || !screen.orientation?.lock) return;
+  try {
+    await screen.orientation.lock(ORIENTATION_TYPES[layout]);
+  } catch {
+    // 全画面でない、対応していないなど。そのときは本体ごと回して合わせる
+  }
+}
+
+async function enterImmersive() {
+  if (!useTouch) return;
+  const root = document.documentElement;
+  if (!document.fullscreenElement && root.requestFullscreen) {
+    try {
+      await root.requestFullscreen({ navigationUI: 'hide' });
+    } catch {
+      // 全画面にできなくても遊べる
+    }
+  }
+  await lockOrientation();
+}
+
+function exitImmersive() {
+  try {
+    screen.orientation?.unlock?.();
+  } catch {
+    // 固定していなければ何もしない
+  }
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+}
+
+// --- 遊んでいるあいだ、画面を暗くしない ---
+
+let wakeLock = null;
+
+async function keepScreenOn() {
+  try {
+    wakeLock = await navigator.wakeLock?.request('screen');
+  } catch {
+    wakeLock = null;
+  }
+}
+
+function releaseScreen() {
+  wakeLock?.release().catch(() => {});
+  wakeLock = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  // 別のアプリに切り替えると解除されるので、戻ってきたら頼み直す
+  if (!document.hidden && running) keepScreenOn();
+});
+
+// --- 「戻る」（Android の戻るボタン・戻るジェスチャー） ---
+// ゲーム中に「戻る」でアプリが閉じてしまわないよう、代わりにゲーム中のメニューを開け閉めする
+
+function guardBack() {
+  if (!history.state?.playing) history.pushState({ playing: true }, '');
+}
+
+window.addEventListener('popstate', () => {
+  if ($('player').hidden) return;
+  if ($('game-menu').hidden) $('open-menu').click();
+  else $('resume').click();
+  history.pushState({ playing: true }, '');
+});
 
 if (useTouch) {
   $('player').classList.add('touch', 'touch-device');
@@ -919,6 +1025,28 @@ window.visualViewport?.addEventListener('resize', () => {
 
 // スマホのブラウザはフォルダごと選べないので、ZIP だけにする
 $('folder-button').hidden = useTouch;
+
+// ホーム画面に追加（Android の Chrome などは、このページからそのまま追加できる）
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  installPrompt = event;
+  $('install').hidden = false;
+});
+$('install').addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => {});
+  installPrompt = null;
+  $('install').hidden = true;
+});
+window.addEventListener('appinstalled', () => {
+  $('install').hidden = true;
+});
+// iPhone の Safari で開いているときは、追加のしかたを案内する（ホーム画面から開いていれば出さない）
+const isStandalone = matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches || navigator.standalone === true;
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+$('install-hint').hidden = !(isIOS && !isStandalone);
 
 // オフラインでも開けるように、アプリのファイルを端末に保存しておく（sw.js）。
 // 開発中（localhost）は古いファイルが使われて紛らわしいので、?sw を付けたときだけ使う。
