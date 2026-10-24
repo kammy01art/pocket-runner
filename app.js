@@ -1043,9 +1043,6 @@ function moveCap(dx, dy) {
 
 // 押している向きを見た目に映す（十字キーはその腕が沈み、スティックはその向きに倒れる）
 function showMove(directions) {
-  for (const press of moveZones.dpad.querySelectorAll('.press')) {
-    press.classList.toggle('on', directions.has(press.dataset.dir));
-  }
   const x = (directions.has('right') ? 1 : 0) - (directions.has('left') ? 1 : 0);
   const y = (directions.has('down') ? 1 : 0) - (directions.has('up') ? 1 : 0);
   // 十字キー全体を、押した向きが奥に沈むように傾ける
@@ -1117,6 +1114,29 @@ for (const button of document.querySelectorAll('.sheet-option[data-hand]')) {
   button.addEventListener('click', () => setHand(button.dataset.hand));
 }
 
+// --- さゆう はんてん ---
+// 左利きの人向けに、十字キーとボタンの左右を入れ替える。選んだものは覚えておく
+
+const MIRRORS = ['off', 'on'];
+const MIRROR_STORAGE_KEY = 'pocket-runner:mirror';
+
+function setMirror(mirror) {
+  releaseAllKeys();
+  $('player').dataset.mirror = mirror;
+  for (const button of document.querySelectorAll('.sheet-option[data-mirror]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.mirror === mirror));
+  }
+  try {
+    localStorage.setItem(MIRROR_STORAGE_KEY, mirror);
+  } catch {
+    // 保存できなくても切り替わる
+  }
+}
+
+for (const button of document.querySelectorAll('.sheet-option[data-mirror]')) {
+  button.addEventListener('click', () => setMirror(button.dataset.mirror));
+}
+
 // --- Z / X / C ボタン ---
 
 const buttonPointers = new Map(); // ボタン → 押している指
@@ -1173,6 +1193,14 @@ function resetTouchControls() {
     // 読めなければりょうて
   }
   setHand(HANDS.includes(savedHand) ? savedHand : 'two');
+
+  let savedMirror = null;
+  try {
+    savedMirror = localStorage.getItem(MIRROR_STORAGE_KEY);
+  } catch {
+    // 読めなければ反転しない
+  }
+  setMirror(MIRRORS.includes(savedMirror) ? savedMirror : 'off');
 }
 
 // ===== 画面の拡大を止める =====

@@ -120,6 +120,16 @@
             <!-- 移動（十字キー）。左側のどこに触れても、十字キーの真ん中からの向きで動く -->
             <div id="dpad" class="move dpad" role="group" aria-label="移動（十字キー）">
               <div class="well">
+                <!-- 十字キーが入る、本体の十字の溝。十字キーが傾いても溝は動かない -->
+                <svg class="dpad-groove" viewBox="0 0 100 100" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="dpad-groove-shade" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#0b0705"/>
+                      <stop offset="1" stop-color="#1c130d"/>
+                    </linearGradient>
+                  </defs>
+                  <use href="#dpad-shape" fill="url(#dpad-groove-shade)" stroke="url(#dpad-groove-shade)" stroke-width="9" stroke-linejoin="round"/>
+                </svg>
                 <svg class="dpad-svg" viewBox="0 0 100 100" aria-hidden="true">
                   <defs>
                     <linearGradient id="dpad-face" x1="0" y1="0" x2=".45" y2="1">
@@ -132,16 +142,8 @@
                       <stop offset="1" stop-color="#2b2b30"/>
                     </radialGradient>
                     <path id="dpad-shape" d="M37 3h26a4 4 0 0 1 4 4v26h26a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H67v26a4 4 0 0 1-4 4H37a4 4 0 0 1-4-4V67H7a4 4 0 0 1-4-4V37a4 4 0 0 1 4-4h26V7a4 4 0 0 1 4-4z"/>
-                    <clipPath id="dpad-clip"><use href="#dpad-shape"/></clipPath>
                   </defs>
                   <use href="#dpad-shape" fill="url(#dpad-face)"/>
-                  <g clip-path="url(#dpad-clip)">
-                    <!-- 押している向きは暗くして、沈んで見せる -->
-                    <rect class="press" data-dir="up" x="33" y="0" width="34" height="36"/>
-                    <rect class="press" data-dir="down" x="33" y="64" width="34" height="36"/>
-                    <rect class="press" data-dir="left" x="0" y="33" width="36" height="34"/>
-                    <rect class="press" data-dir="right" x="64" y="33" width="36" height="34"/>
-                  </g>
                   <use href="#dpad-shape" fill="none" stroke="rgb(255 255 255 / .12)" stroke-width=".8"/>
                   <g class="dpad-arrows" fill="#5a5a62">
                     <path d="M50 9l5 7h-10z"/><path d="M50 91l5-7h-10z"/><path d="M9 50l7-5v10z"/><path d="M91 50l-7-5v10z"/>
@@ -202,6 +204,12 @@
               <div class="sheet-choices" role="group" aria-label="ボタンの並び">
                 <button class="sheet-option" type="button" data-hand="two">りょうて</button>
                 <button class="sheet-option" type="button" data-hand="one">かたて</button>
+              </div>
+              <!-- 左右反転（左利きの人向け）。十字キーとボタンの左右を入れ替える -->
+              <p class="sheet-heading">さゆう はんてん</p>
+              <div class="sheet-choices" role="group" aria-label="左右反転">
+                <button class="sheet-option" type="button" data-mirror="off">しない</button>
+                <button class="sheet-option" type="button" data-mirror="on">する</button>
               </div>
               <p class="sheet-heading">いどうの そうさ</p>
               <div class="sheet-choices" role="group" aria-label="移動の操作">

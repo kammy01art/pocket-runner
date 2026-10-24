@@ -556,6 +556,16 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   background: radial-gradient(circle at 50% 42%, var(--recess), rgb(0 0 0 / .1) 62%, transparent 71%);
 }
 
+/* 十字キーは丸いくぼみではなく、本体に開いた十字の溝（.dpad-groove）に入れる。溝と十字キーは同じ場所に重ねる */
+.dpad .well { background: none; }
+.dpad .well > svg { grid-area: 1 / 1; }
+.dpad-groove {
+  width: var(--dpad-size);
+  height: var(--dpad-size);
+  overflow: visible;
+  /* 溝の下のふちだけ、光が当たって明るく見える */
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / .1));
+}
 .dpad-svg {
   width: var(--dpad-size);
   height: var(--dpad-size);
@@ -565,9 +575,6 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   transform: perspective(260px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
   transition: transform .05s ease-out;
 }
-/* 押した側は傾いて奥に沈むので、ほんの少しだけ影になる */
-.dpad .press { fill: rgb(0 0 0 / .5); opacity: 0; transition: opacity .05s ease-out; }
-.dpad .press.on { opacity: .35; }
 
 /* スティック（3DS のスライドパッドのような、くぼみの中で動く丸いキャップ） */
 .stick .well {
@@ -605,26 +612,15 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .face {
   grid-area: face;
   position: relative;
-  width: calc(var(--btn-x) + var(--btn-z) + var(--hit) * 2);
+  /* Z と X の溝のあいだを少し空ける */
+  width: calc(var(--btn-x) + var(--btn-z) + var(--hit) * 2 + var(--face-gap, 8px));
   height: calc(var(--btn-z) / 2 + var(--btn-x) / 2 + var(--btn-z) * var(--face-dy) + var(--hit) * 2);
-}
-/* ボタン2つが入る、斜めのくぼみ（2つのボタンの中心を結ぶ向きに傾ける） */
-.face::before {
-  --dx: calc((var(--btn-x) + var(--btn-z)) / 2);
-  --dy: calc(var(--btn-z) * var(--face-dy));
-  content: "";
-  position: absolute;
-  top: calc(var(--hit) + var(--btn-z) / 2 + var(--dy) / 2);
-  left: calc(50% + (var(--btn-x) - var(--btn-z)) / 4);
-  width: calc(hypot(var(--dx), var(--dy)) + var(--dx) + 14px);
-  height: calc(var(--btn-z) + 14px);
-  border-radius: 999px;
-  background: var(--recess);
-  box-shadow: inset 0 2px 4px rgb(0 0 0 / .3), 0 1px 0 var(--edge-light);
-  transform: translate(-50%, -50%) rotate(calc(atan2(var(--dy), var(--dx)) * -1));
 }
 
 .face .pad-btn {
+  /* --size はボタンの大きさ、--groove はボタンのまわりの溝の幅 */
+  --size: var(--btn-x);
+  --groove: 6px;
   position: absolute;
   display: flex;
   flex-direction: column;
@@ -637,7 +633,20 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
-.face [data-key="90"] { top: 0; right: 0; }
+/* ボタンが入る、本体に開いた丸い溝。ボタンを押しても溝は動かない */
+.face .pad-btn::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--hit) - var(--groove));
+  left: calc(var(--hit) - var(--groove));
+  width: calc(var(--size) + var(--groove) * 2);
+  height: calc(var(--size) + var(--groove) * 2);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #0b0705, #1c130d);
+  /* 溝の上の内側は影になり、下のふちだけ光が当たって明るく見える */
+  box-shadow: inset 0 3px 4px rgb(0 0 0 / .55), 0 1px 0 rgb(255 255 255 / .1);
+}
+.face [data-key="90"] { --size: var(--btn-z); top: 0; right: 0; }
 .face [data-key="88"] {
   top: calc(var(--btn-z) / 2 - var(--btn-x) / 2 + var(--btn-z) * var(--face-dy));
   left: 0;
@@ -650,33 +659,31 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 }
 
 .dome {
+  position: relative; /* 溝より手前に出す */
   display: grid;
   place-items: center;
-  width: var(--btn-x);
-  height: var(--btn-x);
+  width: var(--size);
+  height: var(--size);
   border-radius: 50%;
   background: radial-gradient(circle at 36% 30%, var(--btn-hi) 0, var(--btn-mid) 34%, var(--btn-lo) 78%);
-  /* --ring はボタンのまわりのくぼみ（片手の並びのとき、ボタンが1つずつ離れるので付ける） */
   box-shadow:
     0 3px 0 var(--btn-edge),
     0 6px 8px rgb(0 0 0 / .45),
     inset 0 -4px 6px rgb(0 0 0 / .25),
-    inset 0 2px 3px rgb(255 255 255 / .3),
-    var(--ring, 0 0 0 0 transparent);
+    inset 0 2px 3px rgb(255 255 255 / .3);
   transition: transform .05s, box-shadow .05s;
 }
-.face [data-key="90"] .dome { width: var(--btn-z); height: var(--btn-z); }
 /* ボタンの表面に薄く印字した文字 */
 .dome b {
   color: var(--btn-print);
-  font: italic 900 calc(var(--btn-x) * .42)/1 var(--label-font);
+  font: italic 900 calc(var(--size) * .42)/1 var(--label-font);
   text-shadow: 0 1px 0 rgb(255 255 255 / .12);
   pointer-events: none;
 }
-.face [data-key="90"] .dome b { font-size: calc(var(--btn-z) * .42); }
+/* 押すと溝の中に沈む */
 .face .pad-btn.on .dome {
   background: radial-gradient(circle at 36% 30%, var(--btn-mid) 0, var(--btn-lo) 55%, var(--btn-edge));
-  box-shadow: 0 1px 0 var(--btn-edge), 0 2px 3px rgb(0 0 0 / .4), inset 0 3px 6px rgb(0 0 0 / .45), var(--ring, 0 0 0 0 transparent);
+  box-shadow: 0 1px 0 var(--btn-edge), 0 2px 3px rgb(0 0 0 / .4), inset 0 3px 6px rgb(0 0 0 / .45);
   transform: translateY(2px);
 }
 
@@ -768,21 +775,20 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   .player.touch .glass { flex: 1; min-height: 0; aspect-ratio: auto; max-height: none; }
   .player.touch .brand { margin-top: 6px; }
   .brand b { font-size: 20px; }
-  .face { justify-self: center; align-self: center; }
+  .face { --face-gap: 4px; justify-self: center; align-self: center; }
   .pills { gap: 12px; align-self: start; }
   .speaker { justify-self: center; align-self: center; margin-top: -16px; padding: 0 8px; }
   .speaker i { height: 28px; }
 }
 
 /* --- かたて: 右手の親指だけで遊ぶときの並び（寝ころんで遊ぶときなど）。
-       十字キーを真ん中の下に大きく、Z を右下に大きく、X を右上に。SYSTEM・MENU は左下に小さく。
-       十字キーの右の腕の上下に X と Z が来るように少し重ねて並べ、スマホの幅に収める --- */
+       十字キーを真ん中の下に大きく、Z を右上に大きく、X を右下に。SYSTEM・MENU は左下に小さく。
+       十字キーの右の腕の上下に Z と X が来るように並べ、スマホの幅に収める --- */
 
 .player.touch[data-hand="one"] .screen {
   --dpad-size: clamp(140px, 41cqmin, 180px);
   --btn-z: clamp(90px, 26.5cqmin, 116px);
   --btn-x: clamp(62px, 18.5cqmin, 80px);
-  --ring: 0 0 0 7px var(--recess);
 }
 /* 操作部分の中に、ボタンを位置で置く（X・Z・十字キーの位置は、十字キーの大きさをもとに決める） */
 .player.touch[data-hand="one"] .controls {
@@ -790,7 +796,6 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   display: block;
 }
 .player.touch[data-hand="one"] .face { display: contents; }
-.player.touch[data-hand="one"] .face::before { display: none; }
 
 /* 十字キー（真ん中の下）。まわり 20px も触れる範囲にする */
 .player.touch[data-hand="one"] .move {
@@ -800,24 +805,25 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   width: calc(var(--dpad-size) * 1.14 + 40px);
   height: calc(var(--dpad-size) * 1.14 + 40px);
 }
-/* X（右上）。十字キーの右の腕より上 */
-.player.touch[data-hand="one"] .face [data-key="88"] {
-  top: auto;
-  right: 14px;
-  bottom: calc(var(--dpad-size) * 1.17 + 8px - var(--btn-x) / 2);
-  left: auto;
-}
-/* Z（右下、大きく）。十字キーの右の腕より下 */
+/* Z（右上、大きく）。十字キーの右の腕より上 */
 .player.touch[data-hand="one"] .face [data-key="90"] {
   top: auto;
   right: 4px;
-  bottom: calc(var(--dpad-size) * .26 + 8px - var(--btn-z) / 2);
+  bottom: calc(var(--dpad-size) * 1.2 + 8px - var(--btn-z) / 2);
+  left: auto;
 }
-/* SYSTEM・MENU（左下に、縦に小さく） */
+/* X（右下）。十字キーの右の腕より下 */
+.player.touch[data-hand="one"] .face [data-key="88"] {
+  top: auto;
+  right: 14px;
+  bottom: calc(var(--dpad-size) * .24 + 8px - var(--btn-x) / 2);
+  left: auto;
+}
+/* SYSTEM・MENU（左下に、縦に小さく）。画面の端から少し離して、ゆとりをもたせる */
 .player.touch[data-hand="one"] .pills {
   position: absolute;
-  bottom: 6px;
-  left: 4px;
+  bottom: 12px;
+  left: 30px;
   flex-direction: column;
   gap: 2px;
   padding: 0;
@@ -827,8 +833,8 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 /* スピーカーの穴は、左下の SYSTEM・MENU の上に小さく */
 .player.touch[data-hand="one"] .speaker {
   position: absolute;
-  bottom: 112px;
-  left: 14px;
+  bottom: 118px;
+  left: 40px;
   padding: 0;
   transform: rotate(-28deg) scale(.6);
   transform-origin: left bottom;
@@ -847,6 +853,44 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   }
   .player.touch[data-hand="one"] .stage {
     max-width: calc(100cqw - 330px - var(--safe-left) - var(--safe-right));
+  }
+}
+
+/* --- さゆう はんてん: 左利きの人向けに、操作の左右を入れ替える（鏡に映したような並び） --- */
+
+/* りょうて（縦持ち）: 十字キーを右に、Z・X を左に */
+.player.touch[data-mirror="on"] .controls {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "face move" "pills pills" "speaker .";
+}
+.player.touch[data-mirror="on"] .face [data-key="90"] { right: auto; left: 0; }
+.player.touch[data-mirror="on"] .face [data-key="88"] { right: 0; left: auto; }
+.player.touch[data-mirror="on"] .speaker { justify-self: start; transform: rotate(28deg); }
+
+/* りょうて（横持ち）: Z・X を画面の左に、十字キーを右に */
+@container device (orientation: landscape) {
+  .player.touch[data-mirror="on"] .screen { grid-template-areas: "face stage move" "speaker stage pills"; }
+  .player.touch[data-mirror="on"] .speaker { justify-self: center; }
+}
+
+/* かたて: 左手の親指だけで遊べるように、十字キー・Z・X・SYSTEM・MENU の位置を左右で入れ替える */
+.player.touch[data-hand="one"][data-mirror="on"] .move {
+  right: calc(47% - var(--dpad-size) * .57 - 20px);
+  left: auto;
+}
+.player.touch[data-hand="one"][data-mirror="on"] .face [data-key="90"] { right: auto; left: 4px; }
+.player.touch[data-hand="one"][data-mirror="on"] .face [data-key="88"] { right: auto; left: 14px; }
+.player.touch[data-hand="one"][data-mirror="on"] .pills { right: 30px; left: auto; }
+.player.touch[data-hand="one"][data-mirror="on"] .speaker {
+  right: 40px;
+  left: auto;
+  transform: rotate(28deg) scale(.6);
+  transform-origin: right bottom;
+}
+@container device (orientation: landscape) {
+  .player.touch[data-hand="one"][data-mirror="on"] .screen {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "controls stage";
   }
 }
 
