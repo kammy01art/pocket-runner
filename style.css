@@ -338,7 +338,10 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   touch-action: none;
   overscroll-behavior: none;
 }
-/* 長押しで虫メガネ（文字選択）やメニューが出ないように、タップしたときの色（Android の水色の四角）も出さない */
+/* 長押しで虫メガネ（文字選択）やメニューが出ないように、タップしたときの色（Android の水色の四角）も出さない。
+   遊んでいるあいだは、ページ全体（html・body）も文字を選べないようにする */
+html:has(.player.touch:not([hidden])),
+html:has(.player.touch:not([hidden])) body,
 .player.touch,
 .player.touch * {
   -webkit-user-select: none;

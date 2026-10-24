@@ -759,10 +759,32 @@ $('player').addEventListener('selectstart', (event) => event.preventDefault());
 
 // iPhone で長押しすると虫メガネ（文字選択の拡大鏡）が出るので、本体への touchstart を止める。
 // 指の動きは pointer のイベントで受け取るので影響しない。メニュー（.sheet）の中は普通に操作できるよう止めない。
-// iPhone の振動用のスイッチ（.haptic）も、止めると指で押したことにならず振動しないので止めない
-document.querySelector('.screen').addEventListener('touchstart', (event) => {
-  if (!event.target.closest('.sheet, .haptic')) event.preventDefault();
+// iPhone の振動用のスイッチ（.haptic）は、止めると指で押したことにならず振動しないので、基本は止めない。
+// ただし、同じボタンをすぐにもう一度押したとき（2回目の指）は止める。「さっと押して、すぐまた押したまま」にすると、
+// iPhone は文字を選ぶ操作とみなし、文字が選べないところでも虫メガネを出すため（この2回目は振動しない）
+const QUICK_RETAP_MS = 380;
+const hapticTapEnds = new WeakMap(); // 振動用のスイッチ → そこで最後に（止めずに通した）指を離した時刻
+const passedTouches = new Map(); // 止めずに通した指 → 振動用のスイッチ
+const touchScreen = document.querySelector('.screen');
+touchScreen.addEventListener('touchstart', (event) => {
+  if (event.target.closest('.sheet')) return;
+  const haptic = event.target.closest('.haptic');
+  if (haptic && !(event.timeStamp - (hapticTapEnds.get(haptic) ?? -Infinity) < QUICK_RETAP_MS)) {
+    for (const touch of event.changedTouches) passedTouches.set(touch.identifier, haptic);
+    return;
+  }
+  event.preventDefault();
 }, { passive: false });
+for (const type of ['touchend', 'touchcancel']) {
+  touchScreen.addEventListener(type, (event) => {
+    for (const touch of event.changedTouches) {
+      const haptic = passedTouches.get(touch.identifier);
+      if (!haptic) continue;
+      passedTouches.delete(touch.identifier);
+      hapticTapEnds.set(haptic, event.timeStamp);
+    }
+  });
+}
 
 // --- 表示の切り替え（PC） ---
 // スマホでは画面いっぱいにタッチ操作を出す。PC では iPhone 15 Pro の大きさの枠で
@@ -975,7 +997,8 @@ function capturePointer(element, event) {
 // iPhone のブラウザは振動の命令に対応していない。スイッチ型のチェックボックス（<input type="checkbox" switch>）を
 // 指で切り替えたときだけ本体が「コツッ」と振動するので、押すところに見えないスイッチを重ねておく（addHapticSwitches）。
 // iOS 26.5 からは、プログラムで切り替えても振動しなくなったため、指で押したときの振動だけが使える。
-// そのため iPhone では、さっと押して指を離したときに1回だけ振動し、強さは変えられない。
+// そのため iPhone では、さっと押して指を離したときに1回だけ振動し、強さは変えられない
+// （iPhone は指を離したときに「押した」とみなすため。押した瞬間や、押したまま向きを変えたときには振動させられない）。
 const HAPTICS = {
   move: 6, // 十字キー: 向きが変わるたびに軽くポコポコ
   z: 30, // Z（けってい）: 強め
