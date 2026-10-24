@@ -789,6 +789,10 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   --dpad-size: clamp(140px, 41cqmin, 180px);
   --btn-z: clamp(90px, 26.5cqmin, 116px);
   --btn-x: clamp(62px, 18.5cqmin, 80px);
+  /* 十字キーの真ん中の位置（左からの割合）と、Z・X の画面の右端からの距離。端から離してゆとりをもたせる */
+  --dpad-at: 46%;
+  --z-edge: 20px;
+  --x-edge: 30px;
 }
 /* 操作部分の中に、ボタンを位置で置く（X・Z・十字キーの位置は、十字キーの大きさをもとに決める） */
 .player.touch[data-hand="one"] .controls {
@@ -801,21 +805,21 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 .player.touch[data-hand="one"] .move {
   position: absolute;
   bottom: calc(var(--dpad-size) * .05 - 4px);
-  left: calc(47% - var(--dpad-size) * .57 - 20px);
+  left: calc(var(--dpad-at) - var(--dpad-size) * .57 - 20px);
   width: calc(var(--dpad-size) * 1.14 + 40px);
   height: calc(var(--dpad-size) * 1.14 + 40px);
 }
 /* Z（右上、大きく）。十字キーの右の腕より上 */
 .player.touch[data-hand="one"] .face [data-key="90"] {
   top: auto;
-  right: 4px;
+  right: var(--z-edge);
   bottom: calc(var(--dpad-size) * 1.2 + 8px - var(--btn-z) / 2);
   left: auto;
 }
 /* X（右下）。十字キーの右の腕より下 */
 .player.touch[data-hand="one"] .face [data-key="88"] {
   top: auto;
-  right: 14px;
+  right: var(--x-edge);
   bottom: calc(var(--dpad-size) * .24 + 8px - var(--btn-x) / 2);
   left: auto;
 }
@@ -846,6 +850,10 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
     --dpad-size: clamp(116px, 33cqmin, 150px);
     --btn-z: clamp(76px, 22cqmin, 96px);
     --btn-x: clamp(56px, 16cqmin, 70px);
+    /* 横持ちは画面の右に、本体の丸みの分の余白（セーフエリア）があるので、端に寄せたままでよい */
+    --dpad-at: 47%;
+    --z-edge: 4px;
+    --x-edge: 14px;
 
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
@@ -875,11 +883,11 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 
 /* かたて: 左手の親指だけで遊べるように、十字キー・Z・X・SYSTEM・MENU の位置を左右で入れ替える */
 .player.touch[data-hand="one"][data-mirror="on"] .move {
-  right: calc(47% - var(--dpad-size) * .57 - 20px);
+  right: calc(var(--dpad-at) - var(--dpad-size) * .57 - 20px);
   left: auto;
 }
-.player.touch[data-hand="one"][data-mirror="on"] .face [data-key="90"] { right: auto; left: 4px; }
-.player.touch[data-hand="one"][data-mirror="on"] .face [data-key="88"] { right: auto; left: 14px; }
+.player.touch[data-hand="one"][data-mirror="on"] .face [data-key="90"] { right: auto; left: var(--z-edge); }
+.player.touch[data-hand="one"][data-mirror="on"] .face [data-key="88"] { right: auto; left: var(--x-edge); }
 .player.touch[data-hand="one"][data-mirror="on"] .pills { right: 30px; left: auto; }
 .player.touch[data-hand="one"][data-mirror="on"] .speaker {
   right: 40px;

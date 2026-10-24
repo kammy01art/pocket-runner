@@ -966,8 +966,46 @@ function capturePointer(element, event) {
   }
 }
 
-function buzz() {
-  navigator.vibrate?.(8); // Android のみ。iPhone のブラウザは振動に対応していない
+// --- 押したときの振動 ---
+// Android は振動の命令（navigator.vibrate）で、振動の長さを変えて強さを出し分ける。
+// iPhone のブラウザは振動の命令に対応していないが、スイッチ型のチェックボックス（<input type="checkbox" switch>）を
+// 切り替えると本体が軽く「コツッ」と振動する（iOS 18 以降）。その強さは変えられないので、
+// 強く感じさせたいときは、間をあけずに続けて鳴らす。
+const HAPTICS = {
+  move: { ms: 6, taps: 1 }, // 十字キー: 向きが変わるたびに軽くポコポコ
+  z: { ms: 30, taps: 2 }, // Z（けってい）: 強め
+  x: { ms: 10, taps: 1 }, // X（もどる）: 軽め
+  menu: { ms: 10, taps: 1 }, // MENU
+};
+const HAPTIC_FOR_KEY = { 90: 'z', 88: 'x', 67: 'menu' };
+const IPHONE_TAP_GAP = 45; // 続けて鳴らすときの間（ミリ秒）
+
+function tapSwitch() {
+  const label = document.createElement('label');
+  label.ariaHidden = 'true';
+  label.style.display = 'none';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.setAttribute('switch', '');
+  label.append(input);
+  document.head.append(label);
+  label.click();
+  label.remove();
+}
+
+function buzz(kind) {
+  const haptic = HAPTICS[kind];
+  if (typeof navigator.vibrate === 'function') {
+    navigator.vibrate(haptic.ms);
+    return;
+  }
+  if (!useTouch) return;
+  try {
+    tapSwitch();
+    for (let i = 1; i < haptic.taps; i++) setTimeout(tapSwitch, i * IPHONE_TAP_GAP);
+  } catch {
+    // 振動できなくても操作はできる
+  }
 }
 
 // --- 移動（十字キー / スティック） ---
@@ -1021,7 +1059,8 @@ function directionsFor(dx, dy, deadZone) {
 function setMoveDirections(next) {
   for (const name of moveDirections) if (!next.has(name)) releaseKey(DIRECTION_KEYS[name]);
   for (const name of next) if (!moveDirections.has(name)) pressKey(DIRECTION_KEYS[name]);
-  if (next.size > moveDirections.size) buzz();
+  // 新しい向きが入るたびに鳴らす（上 → 右上 → 右 と指を回しても、そのたびにポコポコ鳴る）
+  if ([...next].some((name) => !moveDirections.has(name))) buzz('move');
   moveDirections = next;
 }
 
@@ -1150,7 +1189,7 @@ for (const button of document.querySelectorAll('.pad-btn')) {
     capturePointer(button, event);
     button.classList.add('on');
     pressKey(key);
-    buzz();
+    buzz(HAPTIC_FOR_KEY[key] ?? 'x');
   });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
     button.addEventListener(type, (event) => {
