@@ -535,6 +535,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
 
 /* 移動。左側のどこに触れても、十字キー（スティック）の真ん中からの向きで動く */
 .move {
+  position: relative;
   grid-area: move;
   align-self: stretch;
   display: grid;
@@ -696,6 +697,7 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   padding: 6px 0 2px;
 }
 .pill-btn {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -727,6 +729,26 @@ label.button:has(input:disabled) { opacity: .45; cursor: default; }
   box-shadow: 0 0 0 3px var(--recess), 0 1px 0 var(--rubber-edge), inset 0 1px 2px rgb(0 0 0 / .4);
   transform: translateY(1px);
 }
+
+/* iPhone の振動用に、十字キー・ボタンに重ねる見えないラベル（app.js の addHapticSwitches）。
+   中のスイッチは指で切り替わったときだけ本体を振動させる。見えないように 1px にして透明にする */
+.haptic {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+.haptic input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.player[data-haptics="off"] .haptic { display: none; }
 
 /* スピーカーの穴（飾り） */
 .speaker {

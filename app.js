@@ -758,9 +758,10 @@ $('player').addEventListener('contextmenu', (event) => event.preventDefault());
 $('player').addEventListener('selectstart', (event) => event.preventDefault());
 
 // iPhone で長押しすると虫メガネ（文字選択の拡大鏡）が出るので、本体への touchstart を止める。
-// 指の動きは pointer のイベントで受け取るので影響しない。メニュー（.sheet）の中は普通に操作できるよう止めない
+// 指の動きは pointer のイベントで受け取るので影響しない。メニュー（.sheet）の中は普通に操作できるよう止めない。
+// iPhone の振動用のスイッチ（.haptic）も、止めると指で押したことにならず振動しないので止めない
 document.querySelector('.screen').addEventListener('touchstart', (event) => {
-  if (!event.target.closest('.sheet')) event.preventDefault();
+  if (!event.target.closest('.sheet, .haptic')) event.preventDefault();
 }, { passive: false });
 
 // --- 表示の切り替え（PC） ---
@@ -958,9 +959,12 @@ if (useTouch) {
 }
 
 function capturePointer(element, event) {
-  // 指がボタンの外に出ても、離すまでは同じボタンの操作として扱う
+  // 指がボタンの外に出ても、離すまでは同じボタンの操作として扱う。
+  // iPhone の振動用のスイッチ（.haptic）の上で押したときは、そのスイッチで受け取る
+  // （ボタンで受け取ると、指を離したときの「押した」がスイッチに届かず振動しない）。イベントはボタンにも伝わる
+  const target = event.target.closest?.('.haptic') ?? element;
   try {
-    element.setPointerCapture(event.pointerId);
+    target.setPointerCapture(event.pointerId);
   } catch {
     // 合成イベントなどでは失敗することがある。その場合は普通に動かす
   }
@@ -968,44 +972,59 @@ function capturePointer(element, event) {
 
 // --- 押したときの振動 ---
 // Android は振動の命令（navigator.vibrate）で、振動の長さを変えて強さを出し分ける。
-// iPhone のブラウザは振動の命令に対応していないが、スイッチ型のチェックボックス（<input type="checkbox" switch>）を
-// 切り替えると本体が軽く「コツッ」と振動する（iOS 18 以降）。その強さは変えられないので、
-// 強く感じさせたいときは、間をあけずに続けて鳴らす。
+// iPhone のブラウザは振動の命令に対応していない。スイッチ型のチェックボックス（<input type="checkbox" switch>）を
+// 指で切り替えたときだけ本体が「コツッ」と振動するので、押すところに見えないスイッチを重ねておく（addHapticSwitches）。
+// iOS 26.5 からは、プログラムで切り替えても振動しなくなったため、指で押したときの振動だけが使える。
+// そのため iPhone では、さっと押して指を離したときに1回だけ振動し、強さは変えられない。
 const HAPTICS = {
-  move: { ms: 6, taps: 1 }, // 十字キー: 向きが変わるたびに軽くポコポコ
-  z: { ms: 30, taps: 2 }, // Z（けってい）: 強め
-  x: { ms: 10, taps: 1 }, // X（もどる）: 軽め
-  menu: { ms: 10, taps: 1 }, // MENU
+  move: 6, // 十字キー: 向きが変わるたびに軽くポコポコ
+  z: 30, // Z（けってい）: 強め
+  x: 10, // X（もどる）: 軽め
+  menu: 10, // MENU
 };
 const HAPTIC_FOR_KEY = { 90: 'z', 88: 'x', 67: 'menu' };
-const IPHONE_TAP_GAP = 45; // 続けて鳴らすときの間（ミリ秒）
-
-function tapSwitch() {
-  const label = document.createElement('label');
-  label.ariaHidden = 'true';
-  label.style.display = 'none';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.setAttribute('switch', '');
-  label.append(input);
-  document.head.append(label);
-  label.click();
-  label.remove();
-}
+const HAPTIC_MODES = ['on', 'off'];
+const HAPTICS_STORAGE_KEY = 'pocket-runner:haptics';
+// 開発用: URL に ?switch-haptics を付けると、PC でも iPhone 用のスイッチを重ねる
+const useSwitchHaptics = useTouch && (typeof navigator.vibrate !== 'function' || new URLSearchParams(location.search).has('switch-haptics'));
+let hapticsOn = true;
 
 function buzz(kind) {
-  const haptic = HAPTICS[kind];
-  if (typeof navigator.vibrate === 'function') {
-    navigator.vibrate(haptic.ms);
-    return;
+  if (hapticsOn) navigator.vibrate?.(HAPTICS[kind]); // Android
+}
+
+// 十字キー（スティック）・Z・X・MENU に、見えないスイッチを入れたラベルを重ねる（iPhone 用）
+function addHapticSwitches() {
+  for (const host of document.querySelectorAll('.move, .pad-btn')) {
+    const label = document.createElement('label');
+    label.className = 'haptic';
+    label.setAttribute('aria-hidden', 'true');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    input.inert = true; // フォーカスが移らないようにする
+    label.append(input);
+    host.append(label);
   }
-  if (!useTouch) return;
+}
+if (useSwitchHaptics) addHapticSwitches();
+
+// 振動のオン・オフ。オフのときは iPhone 用のスイッチも隠す（隠すと、長押しの虫メガネを止める処理がボタンにも効く）
+function setHaptics(mode) {
+  hapticsOn = mode === 'on';
+  $('player').dataset.haptics = mode;
+  for (const button of document.querySelectorAll('.sheet-option[data-haptics]')) {
+    button.setAttribute('aria-pressed', String(button.dataset.haptics === mode));
+  }
   try {
-    tapSwitch();
-    for (let i = 1; i < haptic.taps; i++) setTimeout(tapSwitch, i * IPHONE_TAP_GAP);
+    localStorage.setItem(HAPTICS_STORAGE_KEY, mode);
   } catch {
-    // 振動できなくても操作はできる
+    // 保存できなくても切り替わる
   }
+}
+
+for (const button of document.querySelectorAll('.sheet-option[data-haptics]')) {
+  button.addEventListener('click', () => setHaptics(button.dataset.haptics));
 }
 
 // --- 移動（十字キー / スティック） ---
@@ -1105,7 +1124,8 @@ function updateMove(event) {
 for (const [mode, zone] of Object.entries(moveZones)) {
   zone.addEventListener('pointerdown', (event) => {
     if (!running || movePointer !== null || mode !== moveMode) return;
-    event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
+    // PC でマウスで押したとき、フォーカスが移らないようにする（指のときは止めない。止めると iPhone の振動用のスイッチに「押した」が届かない）
+    if (event.pointerType === 'mouse') event.preventDefault();
     movePointer = event.pointerId;
     capturePointer(zone, event);
     zone.classList.add('active');
@@ -1184,7 +1204,8 @@ for (const button of document.querySelectorAll('.pad-btn')) {
   const key = Number(button.dataset.key);
   button.addEventListener('pointerdown', (event) => {
     if (!running || buttonPointers.has(button)) return;
-    event.preventDefault(); // PC でマウスで押したとき、フォーカスが移らないようにする
+    // PC でマウスで押したとき、フォーカスが移らないようにする（指のときは止めない。止めると iPhone の振動用のスイッチに「押した」が届かない）
+    if (event.pointerType === 'mouse') event.preventDefault();
     buttonPointers.set(button, event.pointerId);
     capturePointer(button, event);
     button.classList.add('on');
@@ -1240,6 +1261,14 @@ function resetTouchControls() {
     // 読めなければ反転しない
   }
   setMirror(MIRRORS.includes(savedMirror) ? savedMirror : 'off');
+
+  let savedHaptics = null;
+  try {
+    savedHaptics = localStorage.getItem(HAPTICS_STORAGE_KEY);
+  } catch {
+    // 読めなければ振動する
+  }
+  setHaptics(HAPTIC_MODES.includes(savedHaptics) ? savedHaptics : 'on');
 }
 
 // ===== 画面の拡大を止める =====
